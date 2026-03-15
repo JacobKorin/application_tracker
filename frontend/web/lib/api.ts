@@ -115,6 +115,15 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
     cache: "no-store",
   });
 
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    const body = await response.text();
+    const preview = body.slice(0, 120).trim();
+    throw new Error(
+      `API returned a non-JSON response. Check NEXT_PUBLIC_API_BASE_URL. Received: ${preview || "empty response"}`,
+    );
+  }
+
   const payload = ((await response.json()) as ApiEnvelope<T> | ApiErrorEnvelope) ?? {};
   if (!response.ok || !("data" in payload)) {
     const message = "error" in payload ? payload.error?.message : undefined;

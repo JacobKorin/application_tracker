@@ -10,4 +10,4 @@ COPY . /app
 RUN npm run build:web
 
 WORKDIR /app/frontend/web
-CMD ["npm", "run", "start"]
+CMD ["node", ".next/standalone/frontend/web/server.js"]
