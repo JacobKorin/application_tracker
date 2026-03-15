@@ -25,9 +25,6 @@ async function setSessionCookie(payload: { token: string; user: { id: string; em
     SESSION_COOKIE,
     JSON.stringify({
       token: payload.token,
-      userId: payload.user.id,
-      email: payload.user.email,
-      name: payload.user.name,
     }),
     {
       httpOnly: true,

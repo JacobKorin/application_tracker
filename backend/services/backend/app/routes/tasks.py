@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from flask import current_app
 from flask import Blueprint, request
 
 from job_tracker_shared.db import get_session
 from job_tracker_shared.auth import get_user_id
 from job_tracker_shared.responses import error, ok
 
-from ..db_helpers import ensure_user, parse_datetime
-from ..models import Task, utc_now
+from ..db_helpers import parse_datetime
+from ..models import Task, User, utc_now
 from ..serializers import serialize_task
 
 tasks_bp = Blueprint("tasks", __name__, url_prefix="/v1/tasks")
@@ -34,8 +33,9 @@ def create_task():
     if not payload.get("title"):
         return error("Title is required.", 400)
     user_id = get_user_id()
-    default_email = current_app.config["SERVICE_CONFIG"].default_user_email
-    ensure_user(session, user_id, default_email)
+    user = session.get(User, user_id)
+    if user is None:
+        return error("User not found.", 404)
     item = Task(
         user_id=user_id,
         title=payload["title"],

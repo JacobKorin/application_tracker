@@ -4,9 +4,6 @@ export const SESSION_COOKIE = "job_tracker_session";
 
 export type Session = {
   token: string;
-  userId: string;
-  email: string;
-  name: string;
 };
 
 export async function getSession(): Promise<Session | null> {
@@ -22,4 +19,3 @@ export async function getSession(): Promise<Session | null> {
     return null;
   }
 }
-

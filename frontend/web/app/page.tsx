@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { createApplicationAction, signInAction, signUpAction } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { getApplications, getTasks } from "@/lib/api";
+import { getApplications, getCurrentUser, getTasks } from "@/lib/api";
 import { getSession } from "@/lib/session";
 
 export default async function HomePage() {
@@ -65,11 +65,15 @@ export default async function HomePage() {
     );
   }
 
-  const [applications, tasks] = await Promise.all([getApplications(), getTasks()]);
+  const [applications, tasks, currentUser] = await Promise.all([
+    getApplications(),
+    getTasks(),
+    getCurrentUser(),
+  ]);
   const activeApplications = applications.filter((application) => application.status !== "rejected");
 
   return (
-    <DashboardShell session={session}>
+    <DashboardShell user={currentUser.user}>
       <section className="hero">
         <div className="kicker">Live workspace</div>
         <div className="hero-grid">
@@ -169,8 +173,8 @@ export default async function HomePage() {
           <div className="kicker">Account</div>
           <h3>Current session</h3>
           <ul className="list">
-            <li className="list-item">{session.name}</li>
-            <li className="list-item">{session.email}</li>
+            <li className="list-item">{currentUser.user.name}</li>
+            <li className="list-item">{currentUser.user.email}</li>
             <li className="list-item">Your workspace is connected and ready.</li>
           </ul>
         </div>

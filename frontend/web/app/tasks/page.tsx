@@ -6,7 +6,7 @@ import {
   toggleTaskAction,
 } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { getApplications, getReminders, getTasks } from "@/lib/api";
+import { getApplications, getCurrentUser, getReminders, getTasks } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 
@@ -16,14 +16,15 @@ export default async function TasksPage() {
     redirect("/");
   }
 
-  const [tasks, reminders, applications] = await Promise.all([
+  const [tasks, reminders, applications, currentUser] = await Promise.all([
     getTasks(),
     getReminders(),
     getApplications(),
+    getCurrentUser(),
   ]);
 
   return (
-    <DashboardShell session={session}>
+    <DashboardShell user={currentUser.user}>
       <section className="hero">
         <div className="kicker">Execution lane</div>
         <h1>Tasks and reminders</h1>

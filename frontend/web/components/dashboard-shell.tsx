@@ -2,21 +2,23 @@ import Link from "next/link";
 import { ReactNode } from "react";
 
 import { signOutAction } from "@/app/actions";
-import { Session } from "@/lib/session";
 
 type DashboardShellProps = {
   children: ReactNode;
-  session: Session;
+  user: {
+    name: string;
+    email: string;
+  };
 };
 
-export function DashboardShell({ children, session }: DashboardShellProps) {
+export function DashboardShell({ children, user }: DashboardShellProps) {
   return (
     <div className="shell">
       <div className="topbar">
         <div>
           <div className="kicker">Career Control Center</div>
           <h2>Job Tracker</h2>
-          <p className="muted">Signed in as {session.name}</p>
+          <p className="muted">Signed in as {user.name}</p>
         </div>
         <div className="nav-row">
           <Link href="/" className="button secondary">

@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from flask import current_app
 from flask import Blueprint, request
 
 from job_tracker_shared.db import get_session
 from job_tracker_shared.auth import get_user_id
 from job_tracker_shared.responses import error, ok
 
-from ..db_helpers import ensure_user
-from ..models import NotificationLog
+from ..models import NotificationLog, User
 from ..serializers import serialize_notification
 
 notifications_bp = Blueprint("notifications", __name__, url_prefix="/v1/notifications")
@@ -38,8 +36,9 @@ def dispatch_notification():
 
     payload = request.get_json(silent=True) or {}
     user_id = payload.get("user_id") or get_user_id()
-    default_email = current_app.config["SERVICE_CONFIG"].default_user_email
-    ensure_user(session, user_id, default_email)
+    user = session.get(User, user_id)
+    if user is None:
+        return error("User not found.", 404)
     record = NotificationLog(
         user_id=user_id,
         title=payload.get("title", "Notification"),

@@ -48,6 +48,16 @@ export type Settings = {
   weekly_summary?: boolean;
 };
 
+export type CurrentUser = {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    email_verified?: boolean;
+  };
+  settings: Settings | null;
+};
+
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
@@ -60,7 +70,6 @@ function buildHeaders(session: Session | null, idempotencyKey?: string): Headers
 
   if (session) {
     headers.Authorization = `Bearer ${session.token}`;
-    headers["X-User-Id"] = session.userId;
   }
 
   if (idempotencyKey) {
@@ -115,6 +124,10 @@ export async function signIn(email: string, password: string) {
 
 export async function getApplications() {
   return requestJson<Array<Application>>("/v1/applications");
+}
+
+export async function getCurrentUser() {
+  return requestJson<CurrentUser>("/v1/auth/me");
 }
 
 export async function getTasks() {

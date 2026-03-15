@@ -5,7 +5,7 @@ import {
   updateApplicationStageAction,
 } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { getApplications } from "@/lib/api";
+import { getApplications, getCurrentUser } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 
@@ -23,10 +23,10 @@ export default async function ApplicationsPage() {
     redirect("/");
   }
 
-  const applications = await getApplications();
+  const [applications, currentUser] = await Promise.all([getApplications(), getCurrentUser()]);
 
   return (
-    <DashboardShell session={session}>
+    <DashboardShell user={currentUser.user}>
       <section className="hero">
         <div className="kicker">Pipeline view</div>
         <h1>Applications</h1>

@@ -1,6 +1,16 @@
 from app import create_app
 
 
+def sign_up_and_get_token(client, email="demo@example.com", password="demo-password", name="Demo User"):
+    response = client.post(
+        "/v1/auth/sign-up",
+        json={"email": email, "password": password, "name": name},
+    )
+
+    assert response.status_code == 201
+    return response.get_json()["data"]["token"]
+
+
 def test_health_endpoint():
     app = create_app()
     client = app.test_client()
@@ -15,12 +25,7 @@ def test_sign_in_with_demo_user():
     app = create_app()
     client = app.test_client()
 
-    sign_up_response = client.post(
-        "/v1/auth/sign-up",
-        json={"email": "demo@example.com", "password": "demo-password", "name": "Demo User"},
-    )
-
-    assert sign_up_response.status_code == 201
+    sign_up_and_get_token(client)
 
     response = client.post(
         "/v1/auth/sign-in",
@@ -28,16 +33,49 @@ def test_sign_in_with_demo_user():
     )
 
     assert response.status_code == 200
-    assert response.get_json()["data"]["token"].startswith("dev-token:")
+    assert response.get_json()["data"]["token"].count(".") == 2
+
+
+def test_protected_route_requires_valid_token():
+    app = create_app()
+    client = app.test_client()
+
+    response = client.get("/v1/applications")
+
+    assert response.status_code == 401
+
+
+def test_user_cannot_view_another_users_application():
+    app = create_app()
+    client = app.test_client()
+
+    first_token = sign_up_and_get_token(client, "first@example.com", "secret123", "First User")
+    second_token = sign_up_and_get_token(client, "second@example.com", "secret123", "Second User")
+
+    create_response = client.post(
+        "/v1/applications",
+        json={"company": "Acme", "title": "Engineer"},
+        headers={"Authorization": f"Bearer {first_token}"},
+    )
+    application_id = create_response.get_json()["data"]["id"]
+
+    response = client.get(
+        f"/v1/applications/{application_id}",
+        headers={"Authorization": f"Bearer {second_token}"},
+    )
+
+    assert response.status_code == 404
 
 
 def test_reminder_requires_parent_reference():
     app = create_app()
     client = app.test_client()
+    token = sign_up_and_get_token(client)
 
     response = client.post(
         "/v1/reminders",
         json={"title": "Ping recruiter", "scheduled_for": "2026-03-20T10:00:00+00:00"},
+        headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 400
@@ -46,10 +84,12 @@ def test_reminder_requires_parent_reference():
 def test_dispatch_notification_is_idempotent():
     app = create_app()
     client = app.test_client()
-    payload = {"title": "Follow up", "channel": "email", "user_id": "demo-user"}
+    token = sign_up_and_get_token(client)
+    payload = {"title": "Follow up", "channel": "email"}
 
-    first = client.post("/v1/notifications/dispatch", json=payload, headers={"X-Idempotency-Key": "abc"})
-    second = client.post("/v1/notifications/dispatch", json=payload, headers={"X-Idempotency-Key": "abc"})
+    headers = {"X-Idempotency-Key": "abc", "Authorization": f"Bearer {token}"}
+    first = client.post("/v1/notifications/dispatch", json=payload, headers=headers)
+    second = client.post("/v1/notifications/dispatch", json=payload, headers=headers)
 
     assert first.status_code == 201
     assert second.status_code == 200

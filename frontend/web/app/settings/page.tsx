@@ -1,6 +1,6 @@
 import { updateSettingsAction } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { getSettings } from "@/lib/api";
+import { getCurrentUser, getSettings } from "@/lib/api";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 
@@ -10,10 +10,10 @@ export default async function SettingsPage() {
     redirect("/");
   }
 
-  const settings = await getSettings();
+  const [settings, currentUser] = await Promise.all([getSettings(), getCurrentUser()]);
 
   return (
-    <DashboardShell session={session}>
+    <DashboardShell user={currentUser.user}>
       <section className="hero">
         <div className="kicker">Preferences</div>
         <h1>Account settings</h1>

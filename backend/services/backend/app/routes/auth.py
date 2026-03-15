@@ -3,11 +3,12 @@ from __future__ import annotations
 from flask import Blueprint, request
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from job_tracker_shared.auth import create_access_token, get_user_id
 from job_tracker_shared.db import get_session
 from job_tracker_shared.responses import error, ok
 
-from ..models import User
-from ..serializers import serialize_user
+from ..models import NotificationPreference, User, UserSettings
+from ..serializers import serialize_settings, serialize_user
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/v1/auth")
 
@@ -26,8 +27,11 @@ def sign_up():
 
     user = User(email=email, password_hash=generate_password_hash(password), name=name, email_verified=False)
     session.add(user)
+    session.flush()
+    session.add(UserSettings(user_id=user.id))
+    session.add(NotificationPreference(user_id=user.id))
     session.commit()
-    return ok({"user": serialize_user(user), "token": f"dev-token:{user.id}"}, 201)
+    return ok({"user": serialize_user(user), "token": create_access_token(user.id, user.email, user.name)}, 201)
 
 
 @auth_bp.post("/sign-in")
@@ -39,7 +43,7 @@ def sign_in():
 
     user = session.query(User).filter(User.email == email).first()
     if user and check_password_hash(user.password_hash, password or ""):
-        return ok({"user": serialize_user(user), "token": f"dev-token:{user.id}"})
+        return ok({"user": serialize_user(user), "token": create_access_token(user.id, user.email, user.name)})
 
     return error("Invalid credentials.", 401)
 
@@ -53,8 +57,7 @@ def password_reset():
 @auth_bp.post("/verify-email")
 def verify_email():
     session = get_session()
-    payload = request.get_json(silent=True) or {}
-    user_id = payload.get("user_id", "demo-user")
+    user_id = get_user_id()
     user = session.get(User, user_id)
     if not user:
         return error("User not found.", 404)
@@ -65,22 +68,18 @@ def verify_email():
 
 @auth_bp.post("/oauth/google/callback")
 def google_callback():
+    return ok({"message": "Google OAuth is not configured in this environment yet."}, 501)
+
+
+@auth_bp.get("/me")
+def get_me():
     session = get_session()
-    user = session.query(User).filter(User.email == "demo@example.com").first()
+    user = session.get(User, get_user_id())
     if user is None:
-        user = User(
-            id="demo-user",
-            email="demo@example.com",
-            password_hash=generate_password_hash("demo-password"),
-            name="Demo User",
-            email_verified=True,
-        )
-        session.add(user)
-        session.commit()
-    return ok(
-        {
-            "message": "Google OAuth is stubbed in this scaffold.",
-            "token": "dev-token:demo-user",
-            "user": serialize_user(user),
-        }
-    )
+        return error("User not found.", 404)
+
+    payload = {
+        "user": serialize_user(user),
+        "settings": serialize_settings(user.settings) if user.settings else None,
+    }
+    return ok(payload)

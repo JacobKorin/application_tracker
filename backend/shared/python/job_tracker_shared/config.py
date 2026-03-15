@@ -10,6 +10,7 @@ class ServiceConfig:
     port: int
     environment: str
     cors_origin: str
+    jwt_secret: str
     postgres_url: str
     default_user_id: str
     default_user_email: str
@@ -24,6 +25,7 @@ class ServiceConfig:
             port=int(os.getenv("PORT", str(default_port))),
             environment=os.getenv("APP_ENV", "development"),
             cors_origin=os.getenv("CORS_ORIGIN", "*"),
+            jwt_secret=os.getenv("JWT_SECRET", "change-me"),
             postgres_url=os.getenv("POSTGRES_URL", "sqlite:///job_tracker.db"),
             default_user_id=os.getenv("DEFAULT_USER_ID", "demo-user"),
             default_user_email=os.getenv("DEFAULT_USER_EMAIL", "demo@example.com"),
