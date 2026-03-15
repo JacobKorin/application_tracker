@@ -1,0 +1,28 @@
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+
+
+@dataclass(slots=True)
+class ServiceConfig:
+    service_name: str
+    port: int
+    environment: str
+    cors_origin: str
+    identity_service_url: str
+    application_service_url: str
+    notification_service_url: str
+
+    @classmethod
+    def from_env(cls, default_name: str, default_port: int) -> "ServiceConfig":
+        return cls(
+            service_name=os.getenv("SERVICE_NAME", default_name),
+            port=int(os.getenv("PORT", str(default_port))),
+            environment=os.getenv("APP_ENV", "development"),
+            cors_origin=os.getenv("CORS_ORIGIN", "*"),
+            identity_service_url=os.getenv("IDENTITY_SERVICE_URL", "http://localhost:8001"),
+            application_service_url=os.getenv("APPLICATION_SERVICE_URL", "http://localhost:8002"),
+            notification_service_url=os.getenv("NOTIFICATION_SERVICE_URL", "http://localhost:8003"),
+        )
+

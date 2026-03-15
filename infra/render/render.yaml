@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: job-tracker-api-gateway
+    runtime: docker
+    dockerfilePath: backend/services/api-gateway/Dockerfile
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: IDENTITY_SERVICE_URL
+        value: http://job-tracker-identity:8001
+      - key: APPLICATION_SERVICE_URL
+        value: http://job-tracker-application:8002
+      - key: NOTIFICATION_SERVICE_URL
+        value: http://job-tracker-notification:8003
+  - type: private_service
+    name: job-tracker-identity
+    runtime: docker
+    dockerfilePath: backend/services/identity-service/Dockerfile
+  - type: private_service
+    name: job-tracker-application
+    runtime: docker
+    dockerfilePath: backend/services/application-service/Dockerfile
+  - type: private_service
+    name: job-tracker-notification
+    runtime: docker
+    dockerfilePath: backend/services/notification-service/Dockerfile
+  - type: web
+    name: job-tracker-web
+    runtime: docker
+    dockerfilePath: frontend/web/Dockerfile
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: https://job-tracker-api-gateway.onrender.com
+
+databases:
+  - name: job-tracker-postgres
+    databaseName: tracker
+    user: tracker
+

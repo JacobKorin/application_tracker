@@ -1,0 +1,95 @@
+openapi: 3.1.0
+info:
+  title: Job Application Tracker API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8000
+paths:
+  /v1/auth/sign-in:
+    post:
+      summary: Sign in a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignInRequest"
+      responses:
+        "200":
+          description: Authenticated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+  /v1/applications:
+    get:
+      summary: List applications
+      responses:
+        "200":
+          description: Applications
+    post:
+      summary: Create application
+      responses:
+        "201":
+          description: Created
+  /v1/tasks:
+    get:
+      summary: List tasks
+      responses:
+        "200":
+          description: Tasks
+  /v1/contacts:
+    get:
+      summary: List contacts
+      responses:
+        "200":
+          description: Contacts
+  /v1/reminders:
+    get:
+      summary: List reminders
+      responses:
+        "200":
+          description: Reminders
+  /v1/settings:
+    get:
+      summary: Get user settings
+      responses:
+        "200":
+          description: Settings
+  /v1/notification-preferences:
+    get:
+      summary: Get notification preferences
+      responses:
+        "200":
+          description: Notification preferences
+components:
+  schemas:
+    SignInRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+            user:
+              $ref: "#/components/schemas/User"
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+

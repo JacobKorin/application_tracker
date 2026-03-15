@@ -1,0 +1,11 @@
+:root {
+  --jt-color-ink: #1f1d1a;
+  --jt-color-muted: #6a6258;
+  --jt-color-background: #f6f2ea;
+  --jt-color-surface: #fffaf2;
+  --jt-color-accent: #ff6b35;
+  --jt-color-accent-secondary: #2364aa;
+  --jt-color-success: #2e8b57;
+  --jt-radius-lg: 24px;
+  --jt-shadow-lg: 0 18px 60px rgba(55, 37, 12, 0.12);
+}

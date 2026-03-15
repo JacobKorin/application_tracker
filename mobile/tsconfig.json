@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "jsx": "react-jsx",
+    "lib": ["dom", "es2020"],
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "strict": true,
+    "target": "es2020"
+  },
+  "include": ["App.tsx", "src/**/*.ts", "src/**/*.tsx"]
+}
+
