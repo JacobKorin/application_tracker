@@ -249,6 +249,136 @@ a {
   margin-top: 16px;
 }
 
+.table-panel {
+  padding: 12px;
+  overflow: hidden;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.app-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 980px;
+}
+
+.app-table th,
+.app-table td {
+  padding: 14px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(31, 29, 26, 0.08);
+}
+
+.app-table th {
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.company-cell {
+  min-width: 180px;
+}
+
+.notes-cell {
+  max-width: 240px;
+  color: var(--muted);
+}
+
+.table-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 210px;
+}
+
+.table-select {
+  min-width: 112px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 29, 26, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.table-button {
+  padding: 10px 12px;
+}
+
+.row-expander {
+  min-width: 240px;
+}
+
+.row-expander summary,
+.expander summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.row-expander summary::-webkit-details-marker,
+.expander summary::-webkit-details-marker {
+  display: none;
+}
+
+.row-expander summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 29, 26, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  font-weight: 600;
+}
+
+.row-expander-body {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(31, 29, 26, 0.08);
+}
+
+.expander {
+  display: grid;
+  gap: 18px;
+}
+
+.expander summary {
+  display: grid;
+  gap: 8px;
+}
+
+.summary-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.expander-form {
+  padding-top: 8px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.empty-state {
+  padding: 26px;
+  text-align: center;
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -262,7 +392,8 @@ a {
   .panel-grid,
   .panel-grid-wide,
   .auth-grid,
-  .metrics {
+  .metrics,
+  .field-row {
     grid-template-columns: 1fr;
   }
 
