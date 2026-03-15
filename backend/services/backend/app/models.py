@@ -164,3 +164,12 @@ class NotificationLog(Base, TimestampMixin):
 
     user: Mapped[User] = relationship(back_populates="notifications")
 
+
+class AuthRateLimitEvent(Base):
+    __tablename__ = "auth_rate_limit_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    email: Mapped[str | None] = mapped_column(String(255))
+    ip_address: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)

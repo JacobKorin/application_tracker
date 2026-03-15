@@ -144,14 +144,14 @@ function withQuery(path: string, query?: Record<string, string | number | undefi
 }
 
 export async function signUp(email: string, password: string, name: string) {
-  return requestJson<{ token: string; user: { id: string; email: string; name: string } }>(
-    "/v1/auth/sign-up",
-    {
-      method: "POST",
-      body: { email, password, name },
-      session: null,
-    },
-  );
+  return requestJson<
+    | { token: string; user: { id: string; email: string; name: string } }
+    | { message: string }
+  >("/v1/auth/sign-up", {
+    method: "POST",
+    body: { email, password, name },
+    session: null,
+  });
 }
 
 export async function signIn(email: string, password: string) {

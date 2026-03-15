@@ -57,8 +57,12 @@ export async function signUpAction(formData: FormData) {
   const email = requireValue(formData, "email");
   const password = requireValue(formData, "password");
   const payload = await signUp(email, password, name);
-  await setSessionCookie(payload);
-  redirect("/");
+  if ("token" in payload) {
+    await setSessionCookie(payload);
+    redirect("/");
+  }
+
+  redirect("/?authMessage=signup-check-signin");
 }
 
 export async function signOutAction() {

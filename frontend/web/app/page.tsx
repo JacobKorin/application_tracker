@@ -6,11 +6,16 @@ import { getApplications, getCurrentUser, getTasks, UnauthorizedError } from "@/
 import { LoggedOutView } from "@/lib/auth-page";
 import { clearSession, getSession } from "@/lib/session";
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ authMessage?: string }>;
+}) {
+  const params = searchParams ? await searchParams : undefined;
   const session = await getSession();
 
   if (!session) {
-    return <LoggedOutView />;
+    return <LoggedOutView authMessage={params?.authMessage} />;
   }
 
   let applications;
@@ -26,7 +31,7 @@ export default async function HomePage() {
   } catch (error) {
     if (error instanceof UnauthorizedError) {
       await clearSession();
-      return <LoggedOutView sessionExpired />;
+      return <LoggedOutView sessionExpired authMessage={params?.authMessage} />;
     }
     throw error;
   }

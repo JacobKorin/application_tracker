@@ -157,8 +157,19 @@ def upgrade() -> None:
     )
     op.create_index(op.f("ix_notifications_user_id"), "notifications", ["user_id"], unique=False)
 
+    op.create_table(
+        "auth_rate_limit_events",
+        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column("action", sa.String(length=32), nullable=False),
+        sa.Column("email", sa.String(length=255), nullable=True),
+        sa.Column("ip_address", sa.String(length=64), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint("id", name=op.f("pk_auth_rate_limit_events")),
+    )
+
 
 def downgrade() -> None:
+    op.drop_table("auth_rate_limit_events")
     op.drop_index(op.f("ix_notifications_user_id"), table_name="notifications")
     op.drop_table("notifications")
     op.drop_table("notification_preferences")
@@ -173,4 +184,3 @@ def downgrade() -> None:
     op.drop_table("applications")
     op.drop_table("user_settings")
     op.drop_table("users")
-

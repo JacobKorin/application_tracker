@@ -1,6 +1,16 @@
 import { signInAction, signUpAction } from "@/app/actions";
 
-export function LoggedOutView({ sessionExpired = false }: { sessionExpired?: boolean }) {
+const AUTH_MESSAGES: Record<string, string> = {
+  "signup-check-signin": "If that email is available, the account was created. Otherwise, try signing in instead.",
+};
+
+export function LoggedOutView({
+  sessionExpired = false,
+  authMessage,
+}: {
+  sessionExpired?: boolean;
+  authMessage?: string;
+}) {
   return (
     <div className="shell">
       <section className="hero">
@@ -15,6 +25,9 @@ export function LoggedOutView({ sessionExpired = false }: { sessionExpired?: boo
               <div className="session-banner">
                 Your session expired or became invalid. Please sign in again.
               </div>
+            ) : null}
+            {authMessage && AUTH_MESSAGES[authMessage] ? (
+              <div className="session-banner">{AUTH_MESSAGES[authMessage]}</div>
             ) : null}
             <div className="pill-row">
               <span className="pill">Persistent Postgres storage</span>

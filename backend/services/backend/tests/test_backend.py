@@ -36,6 +36,46 @@ def test_sign_in_with_demo_user():
     assert response.get_json()["data"]["token"].count(".") == 2
 
 
+def test_sign_up_does_not_enumerate_existing_accounts():
+    app = create_app()
+    client = app.test_client()
+
+    first = client.post(
+        "/v1/auth/sign-up",
+        json={"email": "demo@example.com", "password": "demo-password", "name": "Demo User"},
+    )
+    second = client.post(
+        "/v1/auth/sign-up",
+        json={"email": "demo@example.com", "password": "different-password", "name": "Another Name"},
+    )
+
+    assert first.status_code == 201
+    assert second.status_code == 202
+    assert second.get_json()["data"]["message"] == "If the account can be created, you may now sign in."
+
+
+def test_sign_in_is_rate_limited_after_repeated_failures():
+    app = create_app()
+    client = app.test_client()
+
+    sign_up_and_get_token(client, "demo@example.com", "demo-password", "Demo User")
+
+    for _ in range(10):
+        response = client.post(
+            "/v1/auth/sign-in",
+            json={"email": "demo@example.com", "password": "wrong-password"},
+        )
+        assert response.status_code == 401
+
+    limited = client.post(
+        "/v1/auth/sign-in",
+        json={"email": "demo@example.com", "password": "wrong-password"},
+    )
+
+    assert limited.status_code == 429
+    assert limited.get_json()["error"]["message"] == "Too many attempts. Please wait and try again."
+
+
 def test_protected_route_requires_valid_token():
     app = create_app()
     client = app.test_client()

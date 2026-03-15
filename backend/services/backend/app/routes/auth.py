@@ -8,6 +8,7 @@ from job_tracker_shared.db import get_session
 from job_tracker_shared.responses import error, ok
 
 from ..models import NotificationPreference, User, UserSettings
+from ..rate_limit import check_rate_limit, clear_rate_limit_events, record_rate_limit_event
 from ..serializers import serialize_settings, serialize_user
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/v1/auth")
@@ -22,8 +23,20 @@ def sign_up():
     name = payload.get("name", "New User")
     if not email or not password:
         return error("Email and password are required.", 400)
+
+    limited = check_rate_limit(session, "sign_up", email)
+    if limited:
+        session.rollback()
+        return limited
+
     if session.query(User).filter(User.email == email).first():
-        return error("Email is already registered.", 409)
+        record_rate_limit_event(session, "sign_up", email)
+        return ok(
+            {
+                "message": "If the account can be created, you may now sign in.",
+            },
+            202,
+        )
 
     user = User(email=email, password_hash=generate_password_hash(password), name=name, email_verified=False)
     session.add(user)
@@ -31,6 +44,7 @@ def sign_up():
     session.add(UserSettings(user_id=user.id))
     session.add(NotificationPreference(user_id=user.id))
     session.commit()
+    clear_rate_limit_events(session, "sign_up", email)
     return ok({"user": serialize_user(user), "token": create_access_token(user.id, user.email, user.name)}, 201)
 
 
@@ -41,10 +55,17 @@ def sign_in():
     email = payload.get("email")
     password = payload.get("password")
 
+    limited = check_rate_limit(session, "sign_in", email)
+    if limited:
+        session.rollback()
+        return limited
+
     user = session.query(User).filter(User.email == email).first()
     if user and check_password_hash(user.password_hash, password or ""):
+        clear_rate_limit_events(session, "sign_in", email)
         return ok({"user": serialize_user(user), "token": create_access_token(user.id, user.email, user.name)})
 
+    record_rate_limit_event(session, "sign_in", email)
     return error("Invalid credentials.", 401)
 
 
