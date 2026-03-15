@@ -95,6 +95,21 @@ export async function updateApplicationStageAction(formData: FormData) {
   revalidatePath("/applications");
 }
 
+export async function updateApplicationDetailsAction(formData: FormData) {
+  await updateApplication(requireValue(formData, "application_id"), {
+    status: requireValue(formData, "status"),
+    location: formData.get("location")?.toString() || null,
+    notes: formData
+      .get("notes")
+      ?.toString()
+      .split("\n")
+      .map((value) => value.trim())
+      .filter(Boolean) ?? [],
+  });
+  revalidatePath("/");
+  revalidatePath("/applications");
+}
+
 export async function deleteApplicationAction(formData: FormData) {
   await deleteApplication(requireValue(formData, "application_id"));
   revalidatePath("/");

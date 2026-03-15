@@ -171,7 +171,7 @@ export default async function HomePage() {
           <ul className="list">
             <li className="list-item">{session.name}</li>
             <li className="list-item">{session.email}</li>
-            <li className="list-item">Backend URL: {process.env.NEXT_PUBLIC_API_BASE_URL ?? "configured"}</li>
+            <li className="list-item">Your workspace is connected and ready.</li>
           </ul>
         </div>
       </section>

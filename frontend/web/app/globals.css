@@ -236,6 +236,10 @@ a {
   padding: 10px 12px;
 }
 
+.application-edit-form {
+  margin-top: 16px;
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;

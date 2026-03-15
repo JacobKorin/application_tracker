@@ -1,6 +1,7 @@
 import {
   createApplicationAction,
   deleteApplicationAction,
+  updateApplicationDetailsAction,
   updateApplicationStageAction,
 } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
@@ -79,13 +80,15 @@ export default async function ApplicationsPage() {
             <p className="muted">{application.location ?? "Location not set"}</p>
             {application.notes.length > 0 ? (
               <ul className="list compact-list">
-                {application.notes.slice(0, 2).map((note) => (
+                {application.notes.map((note) => (
                   <li className="list-item" key={note}>
                     {note}
                   </li>
                 ))}
               </ul>
-            ) : null}
+            ) : (
+              <p className="muted">No notes yet.</p>
+            )}
             <form action={updateApplicationStageAction} className="inline-form">
               <input type="hidden" name="application_id" value={application.id} />
               <select name="status" defaultValue={application.status}>
@@ -99,13 +102,32 @@ export default async function ApplicationsPage() {
                 Update stage
               </button>
             </form>
+            <form action={updateApplicationDetailsAction} className="form-card application-edit-form">
+              <input type="hidden" name="application_id" value={application.id} />
+              <input type="hidden" name="status" value={application.status} />
+              <label className="field">
+                <span>Location</span>
+                <input name="location" type="text" defaultValue={application.location ?? ""} />
+              </label>
+              <label className="field">
+                <span>Notes</span>
+                <textarea
+                  name="notes"
+                  rows={4}
+                  defaultValue={application.notes.join("\n")}
+                  placeholder="One note per line"
+                />
+              </label>
+              <button className="button secondary" type="submit">
+                Save details
+              </button>
+            </form>
             <form action={deleteApplicationAction}>
               <input type="hidden" name="application_id" value={application.id} />
               <button className="button ghost" type="submit">
                 Delete
               </button>
             </form>
-            <p className="muted">Application ID: {application.id}</p>
           </article>
         ))}
       </section>
