@@ -1,39 +1,31 @@
 # Architecture Overview
 
-## Services
+## Deployable services
 
-### API Gateway
-- public entrypoint for web and mobile
-- routes versioned APIs to internal services
-- intended home for auth validation, rate limiting, and response composition
+### Backend
+- single public Flask service for web and mobile clients
+- exposes versioned APIs for auth, applications, contacts, tasks, reminders, and notifications
+- chosen for low-cost hosting on Render without private services
 
-### Identity Service
-- account lifecycle
-- session/token issuance
-- user settings and preferences not owned by another domain
+### Web
+- public Next.js frontend
+- calls the backend using `NEXT_PUBLIC_API_BASE_URL`
 
-### Application Service
-- applications
-- stage history
-- tasks
-- contacts
-- reminders and activity metadata
+## Domain boundaries retained in code
 
-### Notification Service
-- notification preferences
-- delivery log
-- asynchronous dispatch boundary for email and push
+- identity: account lifecycle, settings, auth stubs
+- applications: applications, stage history, tasks, contacts, reminders
+- notifications: preferences, delivery log, idempotent dispatch
 
 ## Data flow
 
-1. Clients call `api-gateway`.
-2. Gateway forwards requests to private services.
-3. Services publish side effects to async workers in the next phase.
+1. Clients call the public backend service.
+2. The backend handles versioned route groups directly.
+3. Background side effects move to workers in the next phase.
 4. PostgreSQL becomes the system of record and Redis backs queueing and caching.
 
 ## Current implementation notes
 
 - The scaffold uses in-memory repositories so the APIs are immediately runnable.
-- Route shapes and service boundaries are designed to survive migration to durable storage.
+- Route shapes and domain boundaries are designed to survive a future split back into microservices if needed.
 - Notification dispatch includes idempotency handling to preserve the intended contract.
-

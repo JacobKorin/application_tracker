@@ -4,7 +4,7 @@ Production-oriented monorepo scaffold for a job application tracker with:
 
 - `Next.js` web app
 - `React Native` mobile app via Expo
-- `Flask` microservices backend
+- `Flask` backend optimized for low-cost Render deployment
 - `PostgreSQL` and `Redis`
 - `Render` deployment blueprint
 
@@ -13,6 +13,7 @@ Production-oriented monorepo scaffold for a job application tracker with:
 ```text
 backend/
   services/
+    backend/
     api-gateway/
     identity-service/
     application-service/
@@ -41,7 +42,7 @@ pip install -e ./backend
 3. Run a service:
 
 ```bash
-python backend/services/application-service/wsgi.py
+python backend/services/backend/wsgi.py
 ```
 
 ### Web
@@ -72,8 +73,8 @@ Copy `.env.example` to `.env` and adjust values for local development. Productio
 
 This repository is a production-ready scaffold rather than a fully completed product. The following are implemented:
 
-- bounded Flask services with health endpoints and versioned APIs
-- gateway forwarding to internal services
+- single Flask deploy target for Render with versioned APIs
+- preserved domain boundaries for identity, application, and notification concerns
 - in-memory development stores for identity, application, and notification flows
 - shared API contract and design tokens
 - web and mobile starter experiences for dashboard workflows
@@ -85,4 +86,3 @@ The following are intentionally stubbed for the next iteration:
 - real Google OAuth, email delivery, and push provider integrations
 - end-to-end auth enforcement across all clients
 - full mobile navigation and offline sync
-
