@@ -3,7 +3,8 @@ FROM python:3.10-slim
 WORKDIR /app
 
 COPY backend /app/backend
-RUN pip install --no-cache-dir -e /app/backend
+RUN pip install --no-cache-dir /app/backend
 
-CMD ["python", "backend/services/backend/wsgi.py"]
+RUN chmod +x /app/backend/services/backend/entrypoint.sh
 
+CMD ["/app/backend/services/backend/entrypoint.sh"]

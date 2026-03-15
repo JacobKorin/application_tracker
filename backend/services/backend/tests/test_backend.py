@@ -15,13 +15,20 @@ def test_sign_in_with_demo_user():
     app = create_app()
     client = app.test_client()
 
+    sign_up_response = client.post(
+        "/v1/auth/sign-up",
+        json={"email": "demo@example.com", "password": "demo-password", "name": "Demo User"},
+    )
+
+    assert sign_up_response.status_code == 201
+
     response = client.post(
         "/v1/auth/sign-in",
         json={"email": "demo@example.com", "password": "demo-password"},
     )
 
     assert response.status_code == 200
-    assert response.get_json()["data"]["token"] == "dev-token:demo-user"
+    assert response.get_json()["data"]["token"].startswith("dev-token:")
 
 
 def test_reminder_requires_parent_reference():

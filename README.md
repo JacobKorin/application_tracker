@@ -36,7 +36,7 @@ docs/
 2. Install the backend package from the repo root:
 
 ```bash
-pip install -e ./backend
+pip install ./backend
 ```
 
 3. Run a service:
@@ -75,14 +75,13 @@ This repository is a production-ready scaffold rather than a fully completed pro
 
 - single Flask deploy target for Render with versioned APIs
 - preserved domain boundaries for identity, application, and notification concerns
-- in-memory development stores for identity, application, and notification flows
+- SQLAlchemy persistence layer with Alembic migrations
 - shared API contract and design tokens
 - web and mobile starter experiences for dashboard workflows
 - Docker, CI, and Render blueprints
 
 The following are intentionally stubbed for the next iteration:
 
-- durable persistence with PostgreSQL/SQLAlchemy migrations
 - real Google OAuth, email delivery, and push provider integrations
 - end-to-end auth enforcement across all clients
 - full mobile navigation and offline sync
