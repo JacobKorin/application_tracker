@@ -129,6 +129,15 @@ a {
   font-size: 0.92rem;
 }
 
+.session-banner {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 107, 53, 0.1);
+  border: 1px solid rgba(255, 107, 53, 0.2);
+  color: #a6401c;
+}
+
 .cta-row,
 .nav-row {
   display: flex;

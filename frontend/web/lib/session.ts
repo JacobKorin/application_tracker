@@ -19,3 +19,8 @@ export async function getSession(): Promise<Session | null> {
     return null;
   }
 }
+
+export async function clearSession() {
+  const store = await cookies();
+  store.set(SESSION_COOKIE, "", { path: "/", maxAge: 0 });
+}

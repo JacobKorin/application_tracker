@@ -12,6 +12,13 @@ type ApiErrorEnvelope = {
   };
 };
 
+export class UnauthorizedError extends Error {
+  constructor(message = "Unauthorized") {
+    super(message);
+    this.name = "UnauthorizedError";
+  }
+}
+
 export type Application = {
   id: string;
   company: string;
@@ -94,6 +101,9 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
   const payload = ((await response.json()) as ApiEnvelope<T> | ApiErrorEnvelope) ?? {};
   if (!response.ok || !("data" in payload)) {
     const message = "error" in payload ? payload.error?.message : undefined;
+    if (response.status === 401) {
+      throw new UnauthorizedError(message ?? "Unauthorized");
+    }
     throw new Error(message ?? "Request failed.");
   }
 

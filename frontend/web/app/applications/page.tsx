@@ -5,9 +5,9 @@ import {
   updateApplicationStageAction,
 } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { getApplications, getCurrentUser } from "@/lib/api";
-import { getSession } from "@/lib/session";
-import { redirect } from "next/navigation";
+import { getApplications, getCurrentUser, UnauthorizedError } from "@/lib/api";
+import { LoggedOutView } from "@/lib/auth-page";
+import { clearSession, getSession } from "@/lib/session";
 
 const stageColor: Record<string, string> = {
   saved: "#2364aa",
@@ -20,10 +20,20 @@ const stageColor: Record<string, string> = {
 export default async function ApplicationsPage() {
   const session = await getSession();
   if (!session) {
-    redirect("/");
+    return <LoggedOutView />;
   }
 
-  const [applications, currentUser] = await Promise.all([getApplications(), getCurrentUser()]);
+  let applications;
+  let currentUser;
+  try {
+    [applications, currentUser] = await Promise.all([getApplications(), getCurrentUser()]);
+  } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      await clearSession();
+      return <LoggedOutView sessionExpired />;
+    }
+    throw error;
+  }
 
   return (
     <DashboardShell user={currentUser.user}>

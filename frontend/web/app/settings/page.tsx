@@ -1,16 +1,26 @@
 import { updateSettingsAction } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { getCurrentUser, getSettings } from "@/lib/api";
-import { getSession } from "@/lib/session";
-import { redirect } from "next/navigation";
+import { getCurrentUser, getSettings, UnauthorizedError } from "@/lib/api";
+import { LoggedOutView } from "@/lib/auth-page";
+import { clearSession, getSession } from "@/lib/session";
 
 export default async function SettingsPage() {
   const session = await getSession();
   if (!session) {
-    redirect("/");
+    return <LoggedOutView />;
   }
 
-  const [settings, currentUser] = await Promise.all([getSettings(), getCurrentUser()]);
+  let settings;
+  let currentUser;
+  try {
+    [settings, currentUser] = await Promise.all([getSettings(), getCurrentUser()]);
+  } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      await clearSession();
+      return <LoggedOutView sessionExpired />;
+    }
+    throw error;
+  }
 
   return (
     <DashboardShell user={currentUser.user}>
