@@ -1,6 +1,7 @@
 FROM node:20-alpine
 
 WORKDIR /app
+ENV HOSTNAME=0.0.0.0
 
 COPY package.json /app/package.json
 COPY frontend/web/package.json /app/frontend/web/package.json
