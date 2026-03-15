@@ -31,7 +31,8 @@ export default async function HomePage() {
     throw error;
   }
 
-  const activeApplications = applications.filter((application) => application.status !== "rejected");
+  const applicationItems = applications.items;
+  const activeApplications = applicationItems.filter((application) => application.status !== "rejected");
 
   return (
     <DashboardShell user={currentUser.user}>
@@ -112,7 +113,7 @@ export default async function HomePage() {
           <div className="kicker">Applications</div>
           <h3>Recent roles</h3>
           <ul className="list">
-            {applications.slice(0, 4).map((application) => (
+            {applicationItems.slice(0, 4).map((application) => (
               <li className="list-item" key={application.id}>
                 <strong>{application.company}</strong>
                 <div>{application.title}</div>

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from math import ceil
+
+from sqlalchemy import or_
 from flask import Blueprint, request
 
 from job_tracker_shared.db import get_session
@@ -12,18 +15,71 @@ from ..serializers import serialize_application
 
 applications_bp = Blueprint("applications", __name__, url_prefix="/v1/applications")
 
+ALLOWED_SORTS = {
+    "updated_desc": lambda query: query.order_by(Application.updated_at.desc()),
+    "updated_asc": lambda query: query.order_by(Application.updated_at.asc()),
+    "company_asc": lambda query: query.order_by(Application.company.asc(), Application.title.asc()),
+    "company_desc": lambda query: query.order_by(Application.company.desc(), Application.title.desc()),
+    "status_asc": lambda query: query.order_by(Application.status.asc(), Application.updated_at.desc()),
+    "status_desc": lambda query: query.order_by(Application.status.desc(), Application.updated_at.desc()),
+}
+
 
 @applications_bp.get("")
 def list_applications():
     session = get_session()
     user_id = get_user_id()
+    search = request.args.get("q", "").strip()
+    status = request.args.get("status", "").strip()
+    sort = request.args.get("sort", "updated_desc").strip()
+    page = max(request.args.get("page", default=1, type=int) or 1, 1)
+    per_page = request.args.get("per_page", default=25, type=int) or 25
+    per_page = min(max(per_page, 1), 100)
+
+    query = session.query(Application).filter(Application.user_id == user_id, Application.deleted_at.is_(None))
+
+    if search:
+        pattern = f"%{search}%"
+        query = query.filter(
+            or_(
+                Application.company.ilike(pattern),
+                Application.title.ilike(pattern),
+                Application.location.ilike(pattern),
+            )
+        )
+
+    if status and status != "all":
+        query = query.filter(Application.status == status)
+
+    query = ALLOWED_SORTS.get(sort, ALLOWED_SORTS["updated_desc"])(query)
+    total = query.count()
+    total_pages = max(ceil(total / per_page), 1)
+    if page > total_pages:
+        page = total_pages
+
     applications = (
-        session.query(Application)
-        .filter(Application.user_id == user_id, Application.deleted_at.is_(None))
-        .order_by(Application.updated_at.desc())
+        query.offset((page - 1) * per_page)
+        .limit(per_page)
         .all()
     )
-    return ok([serialize_application(application) for application in applications])
+    return ok(
+        {
+            "items": [serialize_application(application) for application in applications],
+            "pagination": {
+                "page": page,
+                "per_page": per_page,
+                "total": total,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1,
+            },
+            "filters": {
+                "q": search,
+                "status": status or "all",
+                "sort": sort if sort in ALLOWED_SORTS else "updated_desc",
+            },
+        }
+    )
 
 
 @applications_bp.post("")

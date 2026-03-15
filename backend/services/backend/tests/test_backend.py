@@ -94,3 +94,41 @@ def test_dispatch_notification_is_idempotent():
     assert first.status_code == 201
     assert second.status_code == 200
     assert second.get_json()["data"]["status"] == "duplicate"
+
+
+def test_applications_support_search_filter_sort_and_pagination():
+    app = create_app()
+    client = app.test_client()
+    token = sign_up_and_get_token(client, "search@example.com", "secret123", "Search User")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    client.post(
+        "/v1/applications",
+        json={"company": "Beta Labs", "title": "Backend Engineer", "status": "applied", "location": "Remote"},
+        headers=headers,
+    )
+    client.post(
+        "/v1/applications",
+        json={"company": "Acme Corp", "title": "Platform Engineer", "status": "saved", "location": "Toronto"},
+        headers=headers,
+    )
+    client.post(
+        "/v1/applications",
+        json={"company": "Zenith", "title": "Data Engineer", "status": "interview", "location": "Remote"},
+        headers=headers,
+    )
+
+    response = client.get(
+        "/v1/applications?q=Engineer&status=interview&sort=company_desc&page=1&per_page=1",
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    payload = response.get_json()["data"]
+    assert payload["pagination"]["total"] == 1
+    assert payload["pagination"]["per_page"] == 1
+    assert len(payload["items"]) == 1
+    assert payload["items"][0]["company"] == "Zenith"
+    assert payload["filters"]["q"] == "Engineer"
+    assert payload["filters"]["status"] == "interview"
+    assert payload["filters"]["sort"] == "company_desc"

@@ -32,6 +32,23 @@ export type Application = {
   stage_history: Array<{ stage: string; timestamp: string }>;
 };
 
+export type ApplicationListResponse = {
+  items: Application[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+  filters: {
+    q: string;
+    status: string;
+    sort: string;
+  };
+};
+
 export type Task = {
   id: string;
   title: string;
@@ -110,6 +127,22 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
   return payload.data;
 }
 
+function withQuery(path: string, query?: Record<string, string | number | undefined>) {
+  if (!query) {
+    return path;
+  }
+
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== "") {
+      params.set(key, String(value));
+    }
+  }
+
+  const search = params.toString();
+  return search ? `${path}?${search}` : path;
+}
+
 export async function signUp(email: string, password: string, name: string) {
   return requestJson<{ token: string; user: { id: string; email: string; name: string } }>(
     "/v1/auth/sign-up",
@@ -132,8 +165,14 @@ export async function signIn(email: string, password: string) {
   );
 }
 
-export async function getApplications() {
-  return requestJson<Array<Application>>("/v1/applications");
+export async function getApplications(query?: {
+  q?: string;
+  status?: string;
+  sort?: string;
+  page?: number;
+  per_page?: number;
+}) {
+  return requestJson<ApplicationListResponse>(withQuery("/v1/applications", query));
 }
 
 export async function getCurrentUser() {

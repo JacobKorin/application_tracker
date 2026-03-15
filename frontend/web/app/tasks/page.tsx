@@ -35,6 +35,8 @@ export default async function TasksPage() {
     throw error;
   }
 
+  const applicationItems = applications.items;
+
   return (
     <DashboardShell user={currentUser.user}>
       <section className="hero">
@@ -53,7 +55,7 @@ export default async function TasksPage() {
             <span>Linked application</span>
             <select name="application_id" defaultValue="">
               <option value="">None</option>
-              {applications.map((application) => (
+              {applicationItems.map((application) => (
                 <option key={application.id} value={application.id}>
                   {application.company} - {application.title}
                 </option>
@@ -78,7 +80,7 @@ export default async function TasksPage() {
             <span>Application</span>
             <select name="application_id" defaultValue="">
               <option value="">None</option>
-              {applications.map((application) => (
+              {applicationItems.map((application) => (
                 <option key={application.id} value={application.id}>
                   {application.company} - {application.title}
                 </option>
