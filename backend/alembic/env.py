@@ -16,6 +16,7 @@ sys.path.insert(0, str(SERVICE_ROOT))
 sys.path.insert(0, str(SHARED_ROOT))
 
 from app.models import Base  # noqa: E402
+from job_tracker_shared.db import normalize_database_url  # noqa: E402
 
 config = context.config
 
@@ -26,7 +27,7 @@ target_metadata = Base.metadata
 
 database_url = os.getenv("POSTGRES_URL")
 if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
+    config.set_main_option("sqlalchemy.url", normalize_database_url(database_url))
 
 
 def run_migrations_offline() -> None:
@@ -55,4 +56,3 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
-

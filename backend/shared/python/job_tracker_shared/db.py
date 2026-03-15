@@ -20,8 +20,16 @@ class Base(DeclarativeBase):
     metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
+def normalize_database_url(database_url: str) -> str:
+    if database_url.startswith("postgres://"):
+        return database_url.replace("postgres://", "postgresql+psycopg://", 1)
+    if database_url.startswith("postgresql://") and not database_url.startswith("postgresql+"):
+        return database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return database_url
+
+
 def init_db(app) -> None:
-    database_url = app.config["SERVICE_CONFIG"].postgres_url
+    database_url = normalize_database_url(app.config["SERVICE_CONFIG"].postgres_url)
     connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
     engine = create_engine(database_url, future=True, pool_pre_ping=True, connect_args=connect_args)
     session_factory = scoped_session(
@@ -48,4 +56,3 @@ def session_scope() -> Generator:
     except Exception:
         session.rollback()
         raise
-

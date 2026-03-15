@@ -18,4 +18,4 @@ coverage/
 *.pyo
 *.pyd
 *.sqlite3
-
+*.egg-info/
