@@ -1,5 +1,6 @@
+import Link from "next/link";
+
 import {
-  createApplicationAction,
   deleteApplicationAction,
   updateApplicationDetailsAction,
   updateApplicationStageAction,
@@ -8,7 +9,6 @@ import { DashboardShell } from "@/components/dashboard-shell";
 import { getApplications, getCurrentUser, UnauthorizedError } from "@/lib/api";
 import { LoggedOutView } from "@/lib/auth-page";
 import { clearSession, getSession } from "@/lib/session";
-import Link from "next/link";
 
 type ApplicationsSearchParams = {
   q?: string;
@@ -64,6 +64,10 @@ function buildApplicationsHref(
   return `/applications?${params.toString()}`;
 }
 
+function hasActiveControls(filters: { q: string; status: string; sort: string }, perPage: number) {
+  return Boolean(filters.q) || filters.status !== "all" || filters.sort !== "updated_desc" || perPage !== 25;
+}
+
 export default async function ApplicationsPage({
   searchParams,
 }: {
@@ -98,15 +102,28 @@ export default async function ApplicationsPage({
   const items = applications.items;
   const activeApplications = items.filter((application) => application.status !== "rejected");
   const interviewing = items.filter((application) => application.status === "interview");
+  const controlsOpen = hasActiveControls(applications.filters, applications.pagination.per_page);
+  const showingFrom = applications.pagination.total === 0 ? 0 : (applications.pagination.page - 1) * applications.pagination.per_page + 1;
+  const showingTo =
+    applications.pagination.total === 0
+      ? 0
+      : Math.min(applications.pagination.page * applications.pagination.per_page, applications.pagination.total);
 
   return (
     <DashboardShell user={currentUser.user}>
       <section className="hero">
-        <div className="kicker">Pipeline view</div>
-        <h1>Applications</h1>
-        <p className="muted">
-          Scan the full pipeline quickly, change stage inline, and open row details only when you need to edit notes or clean up records.
-        </p>
+        <div className="hero-header-row">
+          <div>
+            <div className="kicker">Pipeline view</div>
+            <h1>Applications</h1>
+            <p className="muted">
+              Scan the full pipeline quickly, change stage inline, and open row details only when you need to edit notes or clean up records.
+            </p>
+          </div>
+          <Link href="/applications/new" className="plus-button" aria-label="Add application">
+            +
+          </Link>
+        </div>
         <div className="metrics">
           <div className="metric">
             <span className="muted">Tracked roles</span>
@@ -122,25 +139,23 @@ export default async function ApplicationsPage({
           </div>
         </div>
       </section>
-      <section className="panel">
-        <details className="expander" open={applications.pagination.total === 0}>
+
+      <section className="panel table-panel">
+        <details className="expander table-tools" open={controlsOpen}>
           <summary>
-            <span className="kicker">Add application</span>
-            <span className="summary-title">Capture a new role without leaving the table workflow</span>
+            <span className="kicker">Table controls</span>
+            <span className="summary-title">Search, filter, sort, and page the pipeline</span>
           </summary>
-          <form action={createApplicationAction} className="form-card expander-form">
-            <div className="field-row">
+          <div className="table-controls">
+            <form className="toolbar-grid" method="GET">
               <label className="field">
-                <span>Company</span>
-                <input name="company" type="text" required />
-              </label>
-              <label className="field">
-                <span>Role</span>
-                <input name="title" type="text" required />
+                <span>Search</span>
+                <input name="q" type="search" defaultValue={applications.filters.q} placeholder="Company, role, location" />
               </label>
               <label className="field">
                 <span>Status</span>
-                <select name="status" defaultValue="saved">
+                <select name="status" defaultValue={applications.filters.status}>
+                  <option value="all">All statuses</option>
                   <option value="saved">Saved</option>
                   <option value="applied">Applied</option>
                   <option value="interview">Interview</option>
@@ -149,89 +164,64 @@ export default async function ApplicationsPage({
                 </select>
               </label>
               <label className="field">
-                <span>Location</span>
-                <input name="location" type="text" />
+                <span>Sort</span>
+                <select name="sort" defaultValue={applications.filters.sort}>
+                  <option value="updated_desc">Recently updated</option>
+                  <option value="updated_asc">Oldest updates</option>
+                  <option value="company_asc">Company A-Z</option>
+                  <option value="company_desc">Company Z-A</option>
+                  <option value="status_asc">Status A-Z</option>
+                  <option value="status_desc">Status Z-A</option>
+                </select>
               </label>
-            </div>
-            <label className="field">
-              <span>Notes</span>
-              <textarea name="notes" rows={3} placeholder="One note per line" />
-            </label>
-            <div className="cta-row">
-              <button className="button primary" type="submit">
-                Add application
-              </button>
-            </div>
-          </form>
+              <label className="field">
+                <span>Rows</span>
+                <select name="per_page" defaultValue={String(applications.pagination.per_page)}>
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </label>
+              <input type="hidden" name="page" value="1" />
+              <div className="toolbar-actions">
+                <button className="button primary" type="submit">
+                  Apply
+                </button>
+                <Link href="/applications" className="button secondary">
+                  Reset
+                </Link>
+              </div>
+            </form>
+          </div>
         </details>
-      </section>
-      <section className="panel table-panel">
+
+        <div className="results-meta">
+          <span>
+            Showing {showingFrom} - {showingTo} of {applications.pagination.total}
+          </span>
+        </div>
+
         {applications.pagination.total === 0 ? (
           <div className="empty-state">
-            <h3>No applications yet</h3>
-            <p className="muted">Use the add form above to create your first tracked role.</p>
+            <h3>{hasActiveControls(applications.filters, applications.pagination.per_page) ? "No matches for the current controls" : "No applications yet"}</h3>
+            <p className="muted">
+              {hasActiveControls(applications.filters, applications.pagination.per_page)
+                ? "Try adjusting search, filter, or sort settings, or reset the table controls."
+                : "Use the plus button to add your first tracked role."}
+            </p>
+            {hasActiveControls(applications.filters, applications.pagination.per_page) ? (
+              <Link href="/applications" className="button secondary">
+                Clear controls
+              </Link>
+            ) : (
+              <Link href="/applications/new" className="button primary">
+                Add application
+              </Link>
+            )}
           </div>
         ) : (
           <>
-            <div className="table-controls">
-              <form className="toolbar-grid" method="GET">
-                <label className="field">
-                  <span>Search</span>
-                  <input name="q" type="search" defaultValue={applications.filters.q} placeholder="Company, role, location" />
-                </label>
-                <label className="field">
-                  <span>Status</span>
-                  <select name="status" defaultValue={applications.filters.status}>
-                    <option value="all">All statuses</option>
-                    <option value="saved">Saved</option>
-                    <option value="applied">Applied</option>
-                    <option value="interview">Interview</option>
-                    <option value="offer">Offer</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Sort</span>
-                  <select name="sort" defaultValue={applications.filters.sort}>
-                    <option value="updated_desc">Recently updated</option>
-                    <option value="updated_asc">Oldest updates</option>
-                    <option value="company_asc">Company A-Z</option>
-                    <option value="company_desc">Company Z-A</option>
-                    <option value="status_asc">Status A-Z</option>
-                    <option value="status_desc">Status Z-A</option>
-                  </select>
-                </label>
-                <label className="field">
-                  <span>Rows</span>
-                  <select name="per_page" defaultValue={String(applications.pagination.per_page)}>
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                  </select>
-                </label>
-                <input type="hidden" name="page" value="1" />
-                <div className="toolbar-actions">
-                  <button className="button primary" type="submit">
-                    Apply
-                  </button>
-                  <Link href="/applications" className="button secondary">
-                    Reset
-                  </Link>
-                </div>
-              </form>
-              <div className="results-meta">
-                <span>
-                  Showing {(applications.pagination.page - 1) * applications.pagination.per_page + 1}
-                  {" - "}
-                  {Math.min(
-                    applications.pagination.page * applications.pagination.per_page,
-                    applications.pagination.total,
-                  )}{" "}
-                  of {applications.pagination.total}
-                </span>
-              </div>
-            </div>
             <div className="table-wrap">
               <table className="app-table">
                 <thead>
@@ -318,31 +308,30 @@ export default async function ApplicationsPage({
                 </tbody>
               </table>
             </div>
+
+            <div className="pagination-bar">
+              <Link
+                href={buildApplicationsHref(applications.filters, applications.pagination.page - 1, applications.pagination.per_page)}
+                className={`button secondary ${!applications.pagination.has_prev ? "is-disabled" : ""}`}
+                aria-disabled={!applications.pagination.has_prev}
+                tabIndex={applications.pagination.has_prev ? 0 : -1}
+              >
+                Previous
+              </Link>
+              <div className="pagination-copy">
+                Page {applications.pagination.page} of {applications.pagination.total_pages}
+              </div>
+              <Link
+                href={buildApplicationsHref(applications.filters, applications.pagination.page + 1, applications.pagination.per_page)}
+                className={`button secondary ${!applications.pagination.has_next ? "is-disabled" : ""}`}
+                aria-disabled={!applications.pagination.has_next}
+                tabIndex={applications.pagination.has_next ? 0 : -1}
+              >
+                Next
+              </Link>
+            </div>
           </>
         )}
-        {applications.pagination.total > 0 ? (
-          <div className="pagination-bar">
-            <Link
-              href={buildApplicationsHref(applications.filters, applications.pagination.page - 1, applications.pagination.per_page)}
-              className={`button secondary ${!applications.pagination.has_prev ? "is-disabled" : ""}`}
-              aria-disabled={!applications.pagination.has_prev}
-              tabIndex={applications.pagination.has_prev ? 0 : -1}
-            >
-              Previous
-            </Link>
-            <div className="pagination-copy">
-              Page {applications.pagination.page} of {applications.pagination.total_pages}
-            </div>
-            <Link
-              href={buildApplicationsHref(applications.filters, applications.pagination.page + 1, applications.pagination.per_page)}
-              className={`button secondary ${!applications.pagination.has_next ? "is-disabled" : ""}`}
-              aria-disabled={!applications.pagination.has_next}
-              tabIndex={applications.pagination.has_next ? 0 : -1}
-            >
-              Next
-            </Link>
-          </div>
-        ) : null}
       </section>
     </DashboardShell>
   );

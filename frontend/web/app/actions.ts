@@ -84,6 +84,11 @@ export async function createApplicationAction(formData: FormData) {
   revalidatePath("/applications");
 }
 
+export async function createApplicationAndRedirectAction(formData: FormData) {
+  await createApplicationAction(formData);
+  redirect("/applications");
+}
+
 export async function updateApplicationStageAction(formData: FormData) {
   await updateApplication(requireValue(formData, "application_id"), {
     status: requireValue(formData, "status"),
