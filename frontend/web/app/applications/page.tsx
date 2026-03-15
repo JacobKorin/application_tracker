@@ -78,17 +78,6 @@ export default async function ApplicationsPage() {
             <h3>{application.company}</h3>
             <p>{application.title}</p>
             <p className="muted">{application.location ?? "Location not set"}</p>
-            {application.notes.length > 0 ? (
-              <ul className="list compact-list">
-                {application.notes.map((note) => (
-                  <li className="list-item" key={note}>
-                    {note}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted">No notes yet.</p>
-            )}
             <form action={updateApplicationStageAction} className="inline-form">
               <input type="hidden" name="application_id" value={application.id} />
               <select name="status" defaultValue={application.status}>
