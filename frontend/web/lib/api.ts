@@ -1,6 +1,9 @@
 import { getSession, Session } from "@/lib/session";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const DEFAULT_API_BASE_URL = "https://application-tracker-suvm.onrender.com";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") || DEFAULT_API_BASE_URL;
 
 type ApiEnvelope<T> = {
   data: T;

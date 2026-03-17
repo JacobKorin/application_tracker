@@ -2,12 +2,19 @@
   "compilerOptions": {
     "allowJs": false,
     "jsx": "react-jsx",
-    "lib": ["dom", "es2020"],
+    "lib": [
+      "es2020"
+    ],
     "moduleResolution": "bundler",
     "noEmit": true,
+    "skipLibCheck": true,
     "strict": true,
     "target": "es2020"
   },
-  "include": ["App.tsx", "src/**/*.ts", "src/**/*.tsx"]
+  "include": [
+    "App.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ],
+  "extends": "expo/tsconfig.base"
 }
-

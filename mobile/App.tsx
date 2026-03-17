@@ -1,35 +1,209 @@
 import { StatusBar } from "expo-status-bar";
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView, StyleSheet } from "react-native";
+import { useEffect, useState } from "react";
 
-import { PipelineCard } from "./src/components/pipeline-card";
-import { RemindersCard } from "./src/components/reminders-card";
-import { mockApplications, mockReminders } from "./src/screens/mock-data";
+import { ApplicationsScreen } from "./src/components/applications-screen";
+import { AuthScreen } from "./src/components/auth-screen";
+import {
+  Application,
+  AuthResponse,
+  CurrentUser,
+  createApplication,
+  getApplications,
+  getCurrentUser,
+  signIn,
+  signUp,
+  updateApplication,
+} from "./src/lib/api";
+import { colors } from "./src/theme";
+
+type Session = {
+  token: string;
+  user: CurrentUser["user"];
+};
+
+type ApplicationFilters = {
+  q?: string;
+  status?: string;
+  sort?: string;
+};
 
 export default function App() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authInfo, setAuthInfo] = useState<string | null>(null);
+  const [submittingAuth, setSubmittingAuth] = useState(false);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [loadingApplications, setLoadingApplications] = useState(false);
+  const [applicationsError, setApplicationsError] = useState<string | null>(null);
+
+  async function handleAuthResponse(result: AuthResponse) {
+    if ("token" in result) {
+      setSession({
+        token: result.token,
+        user: result.user,
+      });
+      setAuthError(null);
+      setAuthInfo(null);
+      return;
+    }
+
+    setAuthInfo(result.message);
+  }
+
+  async function handleSignIn(email: string, password: string) {
+    try {
+      setSubmittingAuth(true);
+      setAuthError(null);
+      setAuthInfo(null);
+      const result = await signIn(email, password);
+      await handleAuthResponse(result);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Unable to sign in.");
+    } finally {
+      setSubmittingAuth(false);
+    }
+  }
+
+  async function handleSignUp(name: string, email: string, password: string) {
+    try {
+      setSubmittingAuth(true);
+      setAuthError(null);
+      setAuthInfo(null);
+      const result = await signUp(email, password, name);
+      await handleAuthResponse(result);
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Unable to create account.");
+    } finally {
+      setSubmittingAuth(false);
+    }
+  }
+
+  async function refreshApplications(filters: ApplicationFilters = {}) {
+    const token = session?.token;
+    if (!token) {
+      return;
+    }
+
+    try {
+      setLoadingApplications(true);
+      setApplicationsError(null);
+      const response = await getApplications(token, filters);
+      setApplications(response.items);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to load applications.";
+      setApplicationsError(message);
+      if (message.toLowerCase().includes("expired") || message.toLowerCase().includes("unauthorized")) {
+        setSession(null);
+      }
+    } finally {
+      setLoadingApplications(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+    const token = session.token;
+
+    let active = true;
+
+    async function hydrate() {
+      try {
+        setLoadingApplications(true);
+        setApplicationsError(null);
+        const [currentUser, response] = await Promise.all([
+          getCurrentUser(token),
+          getApplications(token, { sort: "updated_desc" }),
+        ]);
+        if (!active) {
+          return;
+        }
+        setSession((current) => (current ? { ...current, user: currentUser.user } : current));
+        setApplications(response.items);
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+        const message = error instanceof Error ? error.message : "Unable to load your workspace.";
+        setApplicationsError(message);
+        if (message.toLowerCase().includes("expired") || message.toLowerCase().includes("unauthorized")) {
+          setSession(null);
+        }
+      } finally {
+        if (active) {
+          setLoadingApplications(false);
+        }
+      }
+    }
+
+    hydrate();
+    return () => {
+      active = false;
+    };
+  }, [session?.token]);
+
+  async function handleCreateApplication(input: {
+    company: string;
+    title: string;
+    location?: string;
+    notes?: string[];
+  }) {
+    const token = session?.token;
+    if (!token) {
+      return;
+    }
+    await createApplication(token, {
+      company: input.company,
+      title: input.title,
+      location: input.location,
+      notes: input.notes,
+      status: "saved",
+    });
+    await refreshApplications({ sort: "updated_desc" });
+  }
+
+  async function handleUpdateApplication(applicationId: string, input: Partial<Application>) {
+    const token = session?.token;
+    if (!token) {
+      return;
+    }
+    await updateApplication(token, applicationId, input);
+    await refreshApplications({ sort: "updated_desc" });
+  }
+
+  function handleSignOut() {
+    setSession(null);
+    setApplications([]);
+    setApplicationsError(null);
+    setAuthError(null);
+    setAuthInfo(null);
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.hero}>
-          <Text style={styles.kicker}>Mobile MVP</Text>
-          <Text style={styles.title}>Track every role without losing the thread.</Text>
-          <Text style={styles.description}>
-            This Expo starter mirrors the web dashboard and is ready for auth, push registration,
-            and API wiring in the next iteration.
-          </Text>
-          <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.primaryButton}>
-              <Text style={styles.primaryButtonText}>Open pipeline</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Notification settings</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <PipelineCard applications={mockApplications} />
-        <RemindersCard reminders={mockReminders} />
-      </ScrollView>
+      {session ? (
+        <ApplicationsScreen
+          applications={applications}
+          currentUser={session.user}
+          errorMessage={applicationsError}
+          loading={loadingApplications}
+          onCreateApplication={handleCreateApplication}
+          onRefresh={refreshApplications}
+          onSignOut={handleSignOut}
+          onUpdateApplication={handleUpdateApplication}
+        />
+      ) : (
+        <AuthScreen
+          errorMessage={authError}
+          infoMessage={authInfo}
+          loading={submittingAuth}
+          onSignIn={handleSignIn}
+          onSignUp={handleSignUp}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -37,67 +211,6 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f6f2ea",
-  },
-  container: {
-    padding: 20,
-    gap: 18,
-  },
-  hero: {
-    backgroundColor: "#fffaf2",
-    borderRadius: 28,
-    padding: 24,
-    shadowColor: "#4e3420",
-    shadowOpacity: 0.1,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
-  },
-  kicker: {
-    color: "#2364aa",
-    textTransform: "uppercase",
-    letterSpacing: 2,
-    fontSize: 12,
-    marginBottom: 8,
-  },
-  title: {
-    color: "#1f1d1a",
-    fontSize: 30,
-    lineHeight: 36,
-    fontWeight: "700",
-  },
-  description: {
-    color: "#6a6258",
-    fontSize: 16,
-    lineHeight: 24,
-    marginTop: 12,
-  },
-  buttonRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: 18,
-  },
-  primaryButton: {
-    backgroundColor: "#ff6b35",
-    borderRadius: 999,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  primaryButtonText: {
-    color: "#ffffff",
-    fontWeight: "700",
-  },
-  secondaryButton: {
-    borderRadius: 999,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: "rgba(31,29,26,0.15)",
-  },
-  secondaryButtonText: {
-    color: "#1f1d1a",
-    fontWeight: "600",
+    backgroundColor: colors.background,
   },
 });
-

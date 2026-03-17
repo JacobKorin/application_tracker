@@ -10,8 +10,7 @@
     "build:web": "npm --workspace frontend/web run build",
     "lint:web": "npm --workspace frontend/web run lint",
     "dev:mobile": "npm --workspace mobile run start",
-    "test:backend": "python3 -m pytest backend/services",
-    "lint:backend": "python3 -m compileall backend"
+    "test:backend": "python -m pytest backend/services",
+    "lint:backend": "python -m compileall backend"
   }
 }
-

@@ -59,6 +59,14 @@ npm install
 npm run dev:mobile
 ```
 
+For Windows + Expo Go testing, copy `.env.example` to `.env` and start the mobile app with a tunnel if your iPhone is not on the same LAN or Windows networking gets in the way:
+
+```powershell
+Copy-Item .env.example .env
+npm install
+npm --workspace mobile run start:tunnel
+```
+
 ### Local infrastructure
 
 ```bash
