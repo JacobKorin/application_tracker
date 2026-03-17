@@ -7,6 +7,7 @@ from job_tracker_shared.auth import get_user_id
 from job_tracker_shared.responses import error, ok
 
 from ..db_helpers import parse_datetime
+from ..ownership import validate_reminder_references
 from ..models import Reminder, User, utc_now
 from ..serializers import serialize_reminder
 
@@ -40,6 +41,14 @@ def create_reminder():
     user = session.get(User, user_id)
     if user is None:
         return error("User not found.", 404)
+    reference_error = validate_reminder_references(
+        session,
+        user_id,
+        application_id=payload.get("application_id"),
+        task_id=payload.get("task_id"),
+    )
+    if reference_error is not None:
+        return reference_error
     item = Reminder(
         user_id=user_id,
         title=payload["title"],
@@ -74,6 +83,14 @@ def patch_reminder(reminder_id: str):
     reminder = session.get(Reminder, reminder_id)
     if reminder is None or reminder.user_id != get_user_id() or reminder.deleted_at is not None:
         return error("Reminder not found.", 404)
+    reference_error = validate_reminder_references(
+        session,
+        reminder.user_id,
+        application_id=payload.get("application_id", reminder.application_id),
+        task_id=payload.get("task_id", reminder.task_id),
+    )
+    if reference_error is not None:
+        return reference_error
     for field in ("title", "application_id", "task_id", "channel"):
         if field in payload:
             setattr(reminder, field, payload[field])

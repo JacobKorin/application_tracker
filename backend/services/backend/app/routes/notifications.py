@@ -35,7 +35,7 @@ def dispatch_notification():
         return ok({"status": "duplicate", "idempotency_key": key})
 
     payload = request.get_json(silent=True) or {}
-    user_id = payload.get("user_id") or get_user_id()
+    user_id = get_user_id()
     user = session.get(User, user_id)
     if user is None:
         return error("User not found.", 404)

@@ -10,6 +10,7 @@ from ..models import User, UserSettings
 from ..serializers import serialize_settings
 
 settings_bp = Blueprint("settings", __name__, url_prefix="/v1/settings")
+ALLOWED_SETTINGS_FIELDS = {"timezone", "theme", "weekly_summary"}
 
 
 @settings_bp.get("")
@@ -39,6 +40,8 @@ def patch_settings():
         current = UserSettings(user_id=user_id)
         session.add(current)
     for key, value in (request.get_json(silent=True) or {}).items():
+        if key not in ALLOWED_SETTINGS_FIELDS:
+            return error(f"Unsupported settings field: {key}", 400)
         setattr(current, key, value)
     session.commit()
     return ok(serialize_settings(current))

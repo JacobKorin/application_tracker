@@ -6,6 +6,7 @@ from job_tracker_shared.db import get_session
 from job_tracker_shared.auth import get_user_id
 from job_tracker_shared.responses import error, ok
 
+from ..ownership import validate_application_ownership
 from ..models import Contact, User, utc_now
 from ..serializers import serialize_contact
 
@@ -35,6 +36,9 @@ def create_contact():
     user = session.get(User, user_id)
     if user is None:
         return error("User not found.", 404)
+    application_error = validate_application_ownership(session, user_id, payload.get("application_id"))
+    if application_error is not None:
+        return application_error
     item = Contact(
         user_id=user_id,
         application_id=payload.get("application_id"),
@@ -63,6 +67,9 @@ def patch_contact(contact_id: str):
     if contact is None or contact.user_id != get_user_id() or contact.deleted_at is not None:
         return error("Contact not found.", 404)
     payload = request.get_json(silent=True) or {}
+    application_error = validate_application_ownership(session, contact.user_id, payload.get("application_id"))
+    if "application_id" in payload and application_error is not None:
+        return application_error
     for field in ("application_id", "name", "title", "email"):
         if field in payload:
             setattr(contact, field, payload[field])

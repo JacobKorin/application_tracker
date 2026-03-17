@@ -94,6 +94,18 @@ npm run typecheck:mobile
 python -m compileall backend
 ```
 
+## Production security checklist
+
+- Set `APP_ENV=production` on Render for the backend service.
+- Set a strong `JWT_SECRET` with at least 32 random characters and rotate it if it was ever exposed.
+- Set `POSTGRES_URL` to the Render internal database URL only. Do not use a public DB URL in production.
+- Set `CORS_ORIGIN` to an explicit comma-separated allowlist of trusted app origins.
+  Example: `https://your-web-app.onrender.com`
+- Keep `NEXT_PUBLIC_API_BASE_URL` and `EXPO_PUBLIC_API_BASE_URL` pointed at the deployed backend URL.
+- Verify the web app stores auth only in an `httpOnly` cookie and does not expose tokens to client-side JS.
+- Confirm the backend starts with Gunicorn on Render and that `/health` returns `200`.
+- Run `npm run test:backend` before deploys to verify auth and authorization regression coverage.
+
 ### Local infrastructure
 
 ```bash

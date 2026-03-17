@@ -7,6 +7,7 @@ from job_tracker_shared.auth import get_user_id
 from job_tracker_shared.responses import error, ok
 
 from ..db_helpers import parse_datetime
+from ..ownership import validate_application_ownership
 from ..models import Task, User, utc_now
 from ..serializers import serialize_task
 
@@ -36,6 +37,9 @@ def create_task():
     user = session.get(User, user_id)
     if user is None:
         return error("User not found.", 404)
+    application_error = validate_application_ownership(session, user_id, payload.get("application_id"))
+    if application_error is not None:
+        return application_error
     item = Task(
         user_id=user_id,
         title=payload["title"],
@@ -64,6 +68,9 @@ def patch_task(task_id: str):
     if task is None or task.user_id != get_user_id() or task.deleted_at is not None:
         return error("Task not found.", 404)
     payload = request.get_json(silent=True) or {}
+    application_error = validate_application_ownership(session, task.user_id, payload.get("application_id"))
+    if "application_id" in payload and application_error is not None:
+        return application_error
     for field in ("title", "application_id", "completed"):
         if field in payload:
             setattr(task, field, payload[field])

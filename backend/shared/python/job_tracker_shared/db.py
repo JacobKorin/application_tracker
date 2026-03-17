@@ -5,6 +5,7 @@ from collections.abc import Generator
 from flask import current_app
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import DeclarativeBase, scoped_session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 NAMING_CONVENTION = {
@@ -31,7 +32,14 @@ def normalize_database_url(database_url: str) -> str:
 def init_db(app) -> None:
     database_url = normalize_database_url(app.config["SERVICE_CONFIG"].postgres_url)
     connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
-    engine = create_engine(database_url, future=True, pool_pre_ping=True, connect_args=connect_args)
+    if database_url.startswith("sqlite") and "mode=memory" in database_url:
+        connect_args["uri"] = True
+    engine_kwargs = {"future": True, "pool_pre_ping": True, "connect_args": connect_args}
+    if database_url.startswith("sqlite") and (
+        database_url.endswith(":memory:") or database_url == "sqlite://" or "mode=memory" in database_url
+    ):
+        engine_kwargs["poolclass"] = StaticPool
+    engine = create_engine(database_url, **engine_kwargs)
     session_factory = scoped_session(
         sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
     )

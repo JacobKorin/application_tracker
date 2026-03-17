@@ -10,6 +10,7 @@ from ..models import NotificationPreference, User
 from ..serializers import serialize_notification_preference
 
 preferences_bp = Blueprint("preferences", __name__, url_prefix="/v1/notification-preferences")
+ALLOWED_PREFERENCE_FIELDS = {"push_enabled", "email_enabled", "quiet_hours_start", "quiet_hours_end"}
 
 
 @preferences_bp.get("")
@@ -39,6 +40,8 @@ def patch_preferences():
         current = NotificationPreference(user_id=user_id)
         session.add(current)
     for key, value in (request.get_json(silent=True) or {}).items():
+        if key not in ALLOWED_PREFERENCE_FIELDS:
+            return error(f"Unsupported notification preference field: {key}", 400)
         setattr(current, key, value)
     session.commit()
     return ok(serialize_notification_preference(current))

@@ -1,5 +1,6 @@
 import os
 import sys
+from uuid import uuid4
 from pathlib import Path
 
 import pytest
@@ -12,15 +13,18 @@ sys.path.insert(0, str(SHARED_ROOT))
 
 
 @pytest.fixture(autouse=True)
-def sqlite_database(tmp_path):
-    os.environ["POSTGRES_URL"] = f"sqlite:///{tmp_path / 'test.db'}"
+def sqlite_database():
+    database_name = f"job-tracker-test-{uuid4().hex}"
+    os.environ["POSTGRES_URL"] = f"sqlite+pysqlite:///file:{database_name}?mode=memory&cache=shared"
 
     from app import create_app
     from app.models import Base
 
     app = create_app()
-    Base.metadata.create_all(bind=app.config["DB_ENGINE"])
+    engine = app.config["DB_ENGINE"]
+    Base.metadata.create_all(bind=engine)
 
     yield
 
-    Base.metadata.drop_all(bind=app.config["DB_ENGINE"])
+    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
