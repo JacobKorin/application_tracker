@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: job-tracker-api
+    name: application-tracker-suvm
     runtime: docker
     dockerfilePath: backend/services/backend/Dockerfile
     envVars:
@@ -12,7 +12,7 @@ services:
     dockerfilePath: frontend/web/Dockerfile
     envVars:
       - key: NEXT_PUBLIC_API_BASE_URL
-        value: https://job-tracker-api.onrender.com
+        value: https://application-tracker-suvm.onrender.com
 
 databases:
   - name: job-tracker-postgres

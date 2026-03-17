@@ -8,9 +8,10 @@
   "scripts": {
     "dev:web": "npm --workspace frontend/web run dev",
     "build:web": "npm --workspace frontend/web run build",
+    "typecheck:mobile": "npm --workspace mobile exec tsc --noEmit",
     "lint:web": "npm --workspace frontend/web run lint",
     "dev:mobile": "npm --workspace mobile run start",
-    "test:backend": "python -m pytest backend/services",
-    "lint:backend": "python -m compileall backend"
+    "test:backend": ".\\.venv\\Scripts\\python.exe .\\backend\\scripts\\run_backend_tests.py",
+    "lint:backend": ".\\.venv\\Scripts\\python.exe -m compileall backend/services backend/shared/python backend/alembic backend/conftest.py"
   }
 }

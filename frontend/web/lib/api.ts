@@ -22,6 +22,20 @@ export class UnauthorizedError extends Error {
   }
 }
 
+export class RateLimitError extends Error {
+  constructor(message = "Too many attempts. Please wait and try again.") {
+    super(message);
+    this.name = "RateLimitError";
+  }
+}
+
+export class UpstreamResponseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UpstreamResponseError";
+  }
+}
+
 export type Application = {
   id: string;
   company: string;
@@ -122,6 +136,9 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
   if (!contentType.includes("application/json")) {
     const body = await response.text();
     const preview = body.slice(0, 120).trim();
+    if (response.status === 429) {
+      throw new RateLimitError("Too many attempts. Please wait a few minutes and try again.");
+    }
     throw new Error(
       `API returned a non-JSON response. Check NEXT_PUBLIC_API_BASE_URL. Received: ${preview || "empty response"}`,
     );
@@ -132,6 +149,9 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
     const message = "error" in payload ? payload.error?.message : undefined;
     if (response.status === 401) {
       throw new UnauthorizedError(message ?? "Unauthorized");
+    }
+    if (response.status === 429) {
+      throw new RateLimitError(message ?? "Too many attempts. Please wait and try again.");
     }
     throw new Error(message ?? "Request failed.");
   }

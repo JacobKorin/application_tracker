@@ -5,6 +5,12 @@
 .venv/
 __pycache__/
 .pytest_cache/
+.pytest_tmp/
+.pytest_run_temp_backend/
+.pytest_run_temp_backend*/
+.pytest_run_temp/
+.pytest_run_temp*/
+backend/pytest-cache-files-*/
 .mypy_cache/
 .coverage
 htmlcov/

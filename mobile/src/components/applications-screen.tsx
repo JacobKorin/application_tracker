@@ -25,6 +25,7 @@ type Props = {
   applications: Application[];
   currentUser: CurrentUser["user"];
   errorMessage: string | null;
+  infoMessage: string | null;
   loading: boolean;
   onCreateApplication: (input: {
     company: string;
@@ -41,6 +42,7 @@ export function ApplicationsScreen({
   applications,
   currentUser,
   errorMessage,
+  infoMessage,
   loading,
   onCreateApplication,
   onRefresh,
@@ -202,6 +204,7 @@ export function ApplicationsScreen({
         <Text style={styles.tableHeaderSecondary}>Stage</Text>
       </View>
 
+      {infoMessage ? <Text style={styles.infoText}>{infoMessage}</Text> : null}
       {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
       {loading ? <ActivityIndicator color={colors.accent} style={styles.loader} /> : null}
 
@@ -423,6 +426,11 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.danger,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  infoText: {
+    color: colors.accent,
     fontSize: 14,
     lineHeight: 20,
   },

@@ -30,32 +30,49 @@ docs/
 
 ## Quick start
 
+## Canonical local workflow
+
+- Use this Windows checkout as the primary day-to-day repo for web and mobile development.
+- Keep WSL optional for shell tooling only, not as a second repo that drifts from Windows.
+- Keep `.env` local-only and use `.env.example` only as a sanitized template.
+- Use Node `20.19.4` or newer for Expo SDK 54 and the current web/mobile toolchain.
+
 ### Backend
 
-1. Create a Python virtualenv.
-2. Install the backend package from the repo root:
+Create a Windows-friendly virtualenv from the repo root:
 
-```bash
-pip install ./backend
+```powershell
+python -m venv .venv
+python -m pip --python .\.venv\Scripts\python.exe install --upgrade pip
+python -m pip --python .\.venv\Scripts\python.exe install -e .\backend[dev]
 ```
 
-3. Run a service:
+Run the backend checks:
 
-```bash
-python backend/services/backend/wsgi.py
+```powershell
+npm run test:backend
+npm run lint:backend
+```
+
+Run the main backend service:
+
+```powershell
+.\.venv\Scripts\python.exe .\backend\services\backend\wsgi.py
 ```
 
 ### Web
 
-```bash
+```powershell
 npm install
+npm run build:web
 npm run dev:web
 ```
 
 ### Mobile
 
-```bash
+```powershell
 npm install
+npm run typecheck:mobile
 npm run dev:mobile
 ```
 
@@ -65,6 +82,16 @@ For Windows + Expo Go testing, copy `.env.example` to `.env` and start the mobil
 Copy-Item .env.example .env
 npm install
 npm --workspace mobile run start:tunnel
+```
+
+The mobile app persists the last successful sign-in locally so an app reload does not force a fresh login.
+
+### Validation checklist
+
+```powershell
+npm run build:web
+npm run typecheck:mobile
+python -m compileall backend
 ```
 
 ### Local infrastructure

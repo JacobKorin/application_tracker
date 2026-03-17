@@ -13,6 +13,13 @@ type ApiErrorEnvelope = {
   };
 };
 
+export class UnauthorizedError extends Error {
+  constructor(message = "Unauthorized") {
+    super(message);
+    this.name = "UnauthorizedError";
+  }
+}
+
 export type CurrentUser = {
   user: {
     id: string;
@@ -103,12 +110,19 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
 
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
-    throw new Error("The server returned an unexpected response.");
+    const body = await response.text();
+    const preview = body.slice(0, 120).trim();
+    throw new Error(
+      `API returned a non-JSON response. Check EXPO_PUBLIC_API_BASE_URL. Received: ${preview || "empty response"}`,
+    );
   }
 
   const payload = ((await response.json()) as ApiEnvelope<T> | ApiErrorEnvelope) ?? {};
   if (!response.ok || !("data" in payload)) {
     const message = "error" in payload ? payload.error?.message : undefined;
+    if (response.status === 401) {
+      throw new UnauthorizedError(message ?? "Unauthorized");
+    }
     throw new Error(message ?? "Request failed.");
   }
 

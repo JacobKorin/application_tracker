@@ -2,6 +2,11 @@ import { signInAction, signUpAction } from "@/app/actions";
 
 const AUTH_MESSAGES: Record<string, string> = {
   "signup-check-signin": "If that email is available, the account was created. Otherwise, try signing in instead.",
+  "sign-in-invalid": "That email or password did not match. Check your credentials and try again.",
+  "sign-in-rate-limited": "Too many sign-in attempts. Wait a few minutes, then try again.",
+  "sign-in-unavailable": "Sign-in is temporarily unavailable. Please try again shortly.",
+  "sign-up-rate-limited": "Too many sign-up attempts. Wait a few minutes, then try again.",
+  "sign-up-unavailable": "Sign-up is temporarily unavailable. Please try again shortly.",
 };
 
 export function LoggedOutView({

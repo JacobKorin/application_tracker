@@ -11,8 +11,10 @@ import {
   deleteApplication,
   deleteReminder,
   deleteTask,
+  RateLimitError,
   signIn,
   signUp,
+  UnauthorizedError,
   updateApplication,
   updateSettings,
   updateTask,
@@ -47,22 +49,40 @@ function requireValue(formData: FormData, key: string) {
 export async function signInAction(formData: FormData) {
   const email = requireValue(formData, "email");
   const password = requireValue(formData, "password");
-  const payload = await signIn(email, password);
-  await setSessionCookie(payload);
-  redirect("/");
+  try {
+    const payload = await signIn(email, password);
+    await setSessionCookie(payload);
+    redirect("/");
+  } catch (error) {
+    if (error instanceof RateLimitError) {
+      redirect("/?authMessage=sign-in-rate-limited");
+    }
+    if (error instanceof UnauthorizedError) {
+      redirect("/?authMessage=sign-in-invalid");
+    }
+    redirect("/?authMessage=sign-in-unavailable");
+  }
 }
 
 export async function signUpAction(formData: FormData) {
   const name = requireValue(formData, "name");
   const email = requireValue(formData, "email");
   const password = requireValue(formData, "password");
-  const payload = await signUp(email, password, name);
-  if ("token" in payload) {
-    await setSessionCookie(payload);
-    redirect("/");
-  }
+  try {
+    const payload = await signUp(email, password, name);
+    if ("token" in payload) {
+      await setSessionCookie(payload);
+      redirect("/");
+    }
 
-  redirect("/?authMessage=signup-check-signin");
+    redirect("/?authMessage=signup-check-signin");
+  } catch (error) {
+    if (error instanceof RateLimitError) {
+      redirect("/?authMessage=sign-up-rate-limited");
+    }
+
+    redirect("/?authMessage=sign-up-unavailable");
+  }
 }
 
 export async function signOutAction() {
