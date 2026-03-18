@@ -1,5 +1,6 @@
 import { ReactNode, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 
 import { Application, Reminder, Task } from "../lib/api";
 import { buildApplicationLabelMap, formatDateTime, partitionReminders, sortTasksForDisplay } from "../lib/execution";
@@ -37,12 +38,16 @@ export function ExecutionPane({
   onToggleTask,
 }: Props) {
   const [taskTitle, setTaskTitle] = useState("");
-  const [taskDueAt, setTaskDueAt] = useState("");
+  const [taskDueAt, setTaskDueAt] = useState<Date | null>(null);
+  const [taskDuePickerMode, setTaskDuePickerMode] = useState<"date" | "time" | null>(null);
   const [taskApplicationId, setTaskApplicationId] = useState<string | undefined>(undefined);
+  const [taskApplicationQuery, setTaskApplicationQuery] = useState("");
   const [taskError, setTaskError] = useState<string | null>(null);
   const [reminderTitle, setReminderTitle] = useState("");
-  const [reminderScheduledFor, setReminderScheduledFor] = useState("");
+  const [reminderScheduledFor, setReminderScheduledFor] = useState<Date | null>(null);
+  const [reminderPickerMode, setReminderPickerMode] = useState<"date" | "time" | null>(null);
   const [reminderApplicationId, setReminderApplicationId] = useState<string | undefined>(undefined);
+  const [reminderApplicationQuery, setReminderApplicationQuery] = useState("");
   const [reminderTaskId, setReminderTaskId] = useState<string | undefined>(undefined);
   const [reminderChannel, setReminderChannel] = useState<"push" | "email">("push");
   const [reminderError, setReminderError] = useState<string | null>(null);
@@ -64,18 +69,19 @@ export function ExecutionPane({
       await onCreateTask({
         title: taskTitle.trim(),
         application_id: taskApplicationId,
-        due_at: taskDueAt.trim() || undefined,
+        due_at: taskDueAt ? taskDueAt.toISOString() : undefined,
       });
       setTaskTitle("");
-      setTaskDueAt("");
+      setTaskDueAt(null);
       setTaskApplicationId(undefined);
+      setTaskApplicationQuery("");
     } catch (error) {
       setTaskError(error instanceof Error ? error.message : "Unable to create task.");
     }
   }
 
   async function handleCreateReminder() {
-    if (!reminderTitle.trim() || !reminderScheduledFor.trim()) {
+    if (!reminderTitle.trim() || !reminderScheduledFor) {
       setReminderError("Reminder title and scheduled time are required.");
       return;
     }
@@ -90,17 +96,48 @@ export function ExecutionPane({
         title: reminderTitle.trim(),
         application_id: reminderApplicationId,
         task_id: reminderTaskId,
-        scheduled_for: reminderScheduledFor.trim(),
+        scheduled_for: reminderScheduledFor.toISOString(),
         channel: reminderChannel,
       });
       setReminderTitle("");
-      setReminderScheduledFor("");
+      setReminderScheduledFor(null);
       setReminderApplicationId(undefined);
+      setReminderApplicationQuery("");
       setReminderTaskId(undefined);
       setReminderChannel("push");
     } catch (error) {
       setReminderError(error instanceof Error ? error.message : "Unable to create reminder.");
     }
+  }
+
+  function updateDateValue(current: Date | null, next: Date, mode: "date" | "time") {
+    const base = current ? new Date(current) : new Date();
+    if (mode === "date") {
+      base.setFullYear(next.getFullYear(), next.getMonth(), next.getDate());
+    } else {
+      base.setHours(next.getHours(), next.getMinutes(), 0, 0);
+    }
+    return base;
+  }
+
+  function handleTaskPickerChange(event: DateTimePickerEvent, selected?: Date) {
+    if (event.type === "dismissed" || !selected || !taskDuePickerMode) {
+      setTaskDuePickerMode(null);
+      return;
+    }
+
+    setTaskDueAt((current) => updateDateValue(current, selected, taskDuePickerMode));
+    setTaskDuePickerMode(null);
+  }
+
+  function handleReminderPickerChange(event: DateTimePickerEvent, selected?: Date) {
+    if (event.type === "dismissed" || !selected || !reminderPickerMode) {
+      setReminderPickerMode(null);
+      return;
+    }
+
+    setReminderScheduledFor((current) => updateDateValue(current, selected, reminderPickerMode));
+    setReminderPickerMode(null);
   }
 
   return (
@@ -122,20 +159,34 @@ export function ExecutionPane({
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>Add task</Text>
         <ComposerField label="Title" value={taskTitle} onChangeText={setTaskTitle} />
-        <ComposerField
+        <DateTimeField
           label="Due at"
-          hint="Use ISO like 2026-03-20T15:00:00+00:00"
           value={taskDueAt}
-          onChangeText={setTaskDueAt}
+          onPickDate={() => setTaskDuePickerMode("date")}
+          onPickTime={() => setTaskDuePickerMode("time")}
+          onClear={() => setTaskDueAt(null)}
         />
-        <SelectionChips
+        {taskDuePickerMode ? (
+          <DateTimePicker
+            value={taskDueAt ?? new Date()}
+            mode={taskDuePickerMode}
+            is24Hour={false}
+            onChange={handleTaskPickerChange}
+          />
+        ) : null}
+        <SearchableApplicationSelector
           label="Linked application"
           emptyLabel="No linked application"
+          query={taskApplicationQuery}
+          onQueryChange={setTaskApplicationQuery}
           selected={taskApplicationId}
-          onSelect={setTaskApplicationId}
+          onSelect={(value) => {
+            setTaskApplicationId(value);
+            setTaskApplicationQuery("");
+          }}
           options={applications.map((application) => ({
             value: application.id,
-            label: application.company,
+            label: `${application.company} - ${application.title}`,
           }))}
         />
         {taskError ? <Text style={styles.errorText}>{taskError}</Text> : null}
@@ -147,25 +198,37 @@ export function ExecutionPane({
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>Add reminder</Text>
         <ComposerField label="Title" value={reminderTitle} onChangeText={setReminderTitle} />
-        <ComposerField
+        <DateTimeField
           label="Scheduled for"
-          hint="Use ISO like 2026-03-20T15:00:00+00:00"
           value={reminderScheduledFor}
-          onChangeText={setReminderScheduledFor}
+          onPickDate={() => setReminderPickerMode("date")}
+          onPickTime={() => setReminderPickerMode("time")}
+          onClear={() => setReminderScheduledFor(null)}
         />
-        <SelectionChips
+        {reminderPickerMode ? (
+          <DateTimePicker
+            value={reminderScheduledFor ?? new Date()}
+            mode={reminderPickerMode}
+            is24Hour={false}
+            onChange={handleReminderPickerChange}
+          />
+        ) : null}
+        <SearchableApplicationSelector
           label="Application"
           emptyLabel="No linked application"
+          query={reminderApplicationQuery}
+          onQueryChange={setReminderApplicationQuery}
           selected={reminderApplicationId}
           onSelect={(value) => {
             setReminderApplicationId(value);
+            setReminderApplicationQuery("");
             if (value) {
               setReminderTaskId(undefined);
             }
           }}
           options={applications.map((application) => ({
             value: application.id,
-            label: application.company,
+            label: `${application.company} - ${application.title}`,
           }))}
         />
         <SelectionChips
@@ -324,6 +387,100 @@ function ComposerField({
   );
 }
 
+function DateTimeField({
+  label,
+  value,
+  onPickDate,
+  onPickTime,
+  onClear,
+}: {
+  label: string;
+  value: Date | null;
+  onPickDate: () => void;
+  onPickTime: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <View style={styles.dateTimeField}>
+        <Text style={styles.dateTimeValue}>{value ? formatDateTime(value.toISOString()) : "No date selected"}</Text>
+        <View style={styles.itemActions}>
+          <Pressable onPress={onPickDate} style={[styles.actionButton, styles.secondaryButton]}>
+            <Text style={styles.secondaryButtonText}>Pick date</Text>
+          </Pressable>
+          <Pressable onPress={onPickTime} style={[styles.actionButton, styles.secondaryButton]}>
+            <Text style={styles.secondaryButtonText}>Pick time</Text>
+          </Pressable>
+          {value ? (
+            <Pressable onPress={onClear} style={[styles.actionButton, styles.ghostButton]}>
+              <Text style={styles.ghostButtonText}>Clear</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function SearchableApplicationSelector({
+  label,
+  emptyLabel,
+  query,
+  onQueryChange,
+  selected,
+  onSelect,
+  options,
+}: {
+  label: string;
+  emptyLabel: string;
+  query: string;
+  onQueryChange: (value: string) => void;
+  selected?: string;
+  onSelect: (value?: string) => void;
+  options: Array<{ value: string; label: string }>;
+}) {
+  const normalizedQuery = query.trim().toLowerCase();
+  const recentOptions = options.slice(0, 6);
+  const filteredOptions = normalizedQuery
+    ? options.filter((option) => option.label.toLowerCase().includes(normalizedQuery)).slice(0, 8)
+    : recentOptions;
+
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TextInput
+        value={query}
+        onChangeText={onQueryChange}
+        placeholder="Search company or role"
+        placeholderTextColor={colors.mutedText}
+        style={styles.input}
+      />
+      <View style={styles.selectorHeader}>
+        <Chip label={emptyLabel} selected={!selected} onPress={() => onSelect(undefined)} />
+        {selected ? (
+          <Text style={styles.selectedLabel}>
+            {options.find((option) => option.value === selected)?.label ?? "Application selected"}
+          </Text>
+        ) : null}
+      </View>
+      <View style={styles.chipRow}>
+        {filteredOptions.map((option) => (
+          <Chip
+            key={option.value}
+            label={option.label}
+            selected={selected === option.value}
+            onPress={() => onSelect(option.value)}
+          />
+        ))}
+      </View>
+      <Text style={styles.helperText}>
+        {normalizedQuery ? "Showing matches" : "Showing recent applications. Search to find older ones."}
+      </Text>
+    </View>
+  );
+}
+
 function SelectionChips({
   label,
   emptyLabel,
@@ -451,10 +608,34 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 15,
   },
+  dateTimeField: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    backgroundColor: colors.white,
+    padding: 14,
+    gap: 12,
+  },
+  dateTimeValue: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: "600",
+  },
   chipRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
+  },
+  selectorHeader: {
+    gap: 8,
+  },
+  selectedLabel: {
+    color: colors.mutedText,
+    fontSize: 13,
+  },
+  helperText: {
+    color: colors.mutedText,
+    fontSize: 12,
   },
   chip: {
     borderRadius: 999,
