@@ -77,6 +77,33 @@ def test_sign_in_is_rate_limited_after_repeated_failures():
     assert limited.get_json()["error"]["message"] == "Too many attempts. Please wait and try again."
 
 
+def test_sign_in_rate_limit_is_scoped_to_email_and_ip_pair():
+    app = create_app()
+    client = app.test_client()
+
+    sign_up_and_get_token(client, "first@example.com", "demo-password", "First User")
+    sign_up_and_get_token(client, "second@example.com", "demo-password", "Second User")
+
+    for _ in range(10):
+        response = client.post(
+            "/v1/auth/sign-in",
+            json={"email": "first@example.com", "password": "wrong-password"},
+        )
+        assert response.status_code == 401
+
+    limited = client.post(
+        "/v1/auth/sign-in",
+        json={"email": "first@example.com", "password": "wrong-password"},
+    )
+    other_email = client.post(
+        "/v1/auth/sign-in",
+        json={"email": "second@example.com", "password": "demo-password"},
+    )
+
+    assert limited.status_code == 429
+    assert other_email.status_code == 200
+
+
 def test_protected_route_requires_valid_token():
     app = create_app()
     client = app.test_client()

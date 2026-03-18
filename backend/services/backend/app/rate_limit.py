@@ -39,10 +39,8 @@ def check_rate_limit(session, action: str, email: str | None):
         .filter(
             AuthRateLimitEvent.action == action,
             AuthRateLimitEvent.created_at >= cutoff,
-            (
-                (AuthRateLimitEvent.email == normalized_email)
-                | (AuthRateLimitEvent.ip_address == ip_address)
-            ),
+            AuthRateLimitEvent.email == normalized_email,
+            AuthRateLimitEvent.ip_address == ip_address,
         )
         .count()
     )
@@ -68,10 +66,8 @@ def clear_rate_limit_events(session, action: str, email: str | None):
     session.execute(
         delete(AuthRateLimitEvent).where(
             AuthRateLimitEvent.action == action,
-            (
-                (AuthRateLimitEvent.email == normalized_email)
-                | (AuthRateLimitEvent.ip_address == ip_address)
-            ),
+            AuthRateLimitEvent.email == normalized_email,
+            AuthRateLimitEvent.ip_address == ip_address,
         )
     )
     session.commit()
