@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from sqlalchemy import case
 from flask import Blueprint, request
 
 from job_tracker_shared.db import get_session
@@ -21,7 +22,12 @@ def list_tasks():
     tasks = (
         session.query(Task)
         .filter(Task.user_id == user_id, Task.deleted_at.is_(None))
-        .order_by(Task.updated_at.desc())
+        .order_by(
+            case((Task.completed.is_(False), 0), else_=1),
+            case((Task.due_at.is_(None), 1), else_=0),
+            Task.due_at.asc(),
+            Task.updated_at.desc(),
+        )
         .all()
     )
     return ok([serialize_task(task) for task in tasks])

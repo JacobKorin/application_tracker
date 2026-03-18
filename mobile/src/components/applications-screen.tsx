@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 
-import { Application, CurrentUser } from "../lib/api";
+import { Application } from "../lib/api";
 import { colors } from "../theme";
 import { ApplicationRow } from "./application-row";
 
@@ -23,7 +23,6 @@ const SORT_OPTIONS = [
 
 type Props = {
   applications: Application[];
-  currentUser: CurrentUser["user"];
   errorMessage: string | null;
   infoMessage: string | null;
   loading: boolean;
@@ -34,19 +33,16 @@ type Props = {
     notes?: string[];
   }) => Promise<void>;
   onRefresh: (filters?: { q?: string; status?: string; sort?: string }) => Promise<void>;
-  onSignOut: () => void;
   onUpdateApplication: (applicationId: string, update: Partial<Application>) => Promise<void>;
 };
 
 export function ApplicationsScreen({
   applications,
-  currentUser,
   errorMessage,
   infoMessage,
   loading,
   onCreateApplication,
   onRefresh,
-  onSignOut,
   onUpdateApplication,
 }: Props) {
   const [queryDraft, setQueryDraft] = useState("");
@@ -98,15 +94,10 @@ export function ApplicationsScreen({
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.kicker}>Applications</Text>
-          <Text style={styles.title}>Your pipeline</Text>
-          <Text style={styles.subtitle}>Signed in as {currentUser.name}</Text>
-        </View>
-        <Pressable onPress={onSignOut} style={styles.ghostButton}>
-          <Text style={styles.ghostButtonText}>Sign out</Text>
-        </Pressable>
+      <View style={styles.headerText}>
+        <Text style={styles.kicker}>Applications</Text>
+        <Text style={styles.title}>Your pipeline</Text>
+        <Text style={styles.subtitle}>Search, filter, and keep your active roles moving.</Text>
       </View>
 
       <View style={styles.toolbar}>
@@ -260,14 +251,7 @@ const styles = StyleSheet.create({
     gap: 14,
     backgroundColor: colors.background,
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
-  },
   headerText: {
-    flex: 1,
     gap: 4,
   },
   kicker: {

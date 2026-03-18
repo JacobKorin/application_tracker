@@ -20,6 +20,13 @@ export class UnauthorizedError extends Error {
   }
 }
 
+export class RateLimitError extends Error {
+  constructor(message = "Too many attempts. Please wait and try again.") {
+    super(message);
+    this.name = "RateLimitError";
+  }
+}
+
 export type CurrentUser = {
   user: {
     id: string;
@@ -60,6 +67,23 @@ export type Application = {
   stage_history: Array<{ stage: string; timestamp: string | null }>;
 };
 
+export type Task = {
+  id: string;
+  title: string;
+  application_id?: string | null;
+  due_at?: string | null;
+  completed: boolean;
+};
+
+export type Reminder = {
+  id: string;
+  title: string;
+  application_id?: string | null;
+  task_id?: string | null;
+  scheduled_for: string;
+  channel: string;
+};
+
 type ApplicationListResponse = {
   items: Application[];
   pagination: {
@@ -78,7 +102,7 @@ type ApplicationListResponse = {
 };
 
 type RequestOptions = {
-  method?: "GET" | "POST" | "PATCH";
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
   token?: string;
 };
@@ -122,6 +146,9 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
     const message = "error" in payload ? payload.error?.message : undefined;
     if (response.status === 401) {
       throw new UnauthorizedError(message ?? "Unauthorized");
+    }
+    if (response.status === 429) {
+      throw new RateLimitError(message ?? "Too many attempts. Please wait and try again.");
     }
     throw new Error(message ?? "Request failed.");
   }
@@ -185,6 +212,73 @@ export async function updateApplication(token: string, id: string, body: Partial
   return requestJson<Application>(`/v1/applications/${id}`, {
     method: "PATCH",
     body,
+    token,
+  });
+}
+
+export async function getTasks(token: string) {
+  return requestJson<Task[]>("/v1/tasks", {
+    token,
+  });
+}
+
+export async function createTask(
+  token: string,
+  body: {
+    title: string;
+    application_id?: string;
+    due_at?: string;
+    completed?: boolean;
+  },
+) {
+  return requestJson<Task>("/v1/tasks", {
+    method: "POST",
+    body,
+    token,
+  });
+}
+
+export async function updateTask(token: string, id: string, body: Partial<Task>) {
+  return requestJson<Task>(`/v1/tasks/${id}`, {
+    method: "PATCH",
+    body,
+    token,
+  });
+}
+
+export async function deleteTask(token: string, id: string) {
+  return requestJson<{ id: string; deleted: boolean }>(`/v1/tasks/${id}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export async function getReminders(token: string) {
+  return requestJson<Reminder[]>("/v1/reminders", {
+    token,
+  });
+}
+
+export async function createReminder(
+  token: string,
+  body: {
+    title: string;
+    application_id?: string;
+    task_id?: string;
+    scheduled_for: string;
+    channel: string;
+  },
+) {
+  return requestJson<Reminder>("/v1/reminders", {
+    method: "POST",
+    body,
+    token,
+  });
+}
+
+export async function deleteReminder(token: string, id: string) {
+  return requestJson<{ id: string; deleted: boolean }>(`/v1/reminders/${id}`, {
+    method: "DELETE",
     token,
   });
 }

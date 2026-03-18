@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from sqlalchemy import case
 from flask import Blueprint, request
 
 from job_tracker_shared.db import get_session
@@ -21,7 +22,11 @@ def list_reminders():
     reminders = (
         session.query(Reminder)
         .filter(Reminder.user_id == user_id, Reminder.deleted_at.is_(None))
-        .order_by(Reminder.updated_at.desc())
+        .order_by(
+            case((Reminder.scheduled_for.is_(None), 1), else_=0),
+            Reminder.scheduled_for.asc(),
+            Reminder.updated_at.desc(),
+        )
         .all()
     )
     return ok([serialize_reminder(reminder) for reminder in reminders])

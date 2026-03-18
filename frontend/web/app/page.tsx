@@ -2,8 +2,9 @@ import Link from "next/link";
 
 import { createApplicationAction } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { getApplications, getCurrentUser, getTasks, UnauthorizedError } from "@/lib/api";
+import { getApplications, getCurrentUser, getReminders, getTasks, UnauthorizedError } from "@/lib/api";
 import { LoggedOutView } from "@/lib/auth-page";
+import { buildApplicationLabelMap, formatDateTime, partitionReminders, sortTasksForDisplay } from "@/lib/execution";
 import { clearSession, getSession } from "@/lib/session";
 
 export default async function HomePage({
@@ -20,12 +21,14 @@ export default async function HomePage({
 
   let applications;
   let tasks;
+  let reminders;
   let currentUser;
 
   try {
-    [applications, tasks, currentUser] = await Promise.all([
+    [applications, tasks, reminders, currentUser] = await Promise.all([
       getApplications(),
       getTasks(),
+      getReminders(),
       getCurrentUser(),
     ]);
   } catch (error) {
@@ -38,6 +41,10 @@ export default async function HomePage({
 
   const applicationItems = applications.items;
   const activeApplications = applicationItems.filter((application) => application.status !== "rejected");
+  const pendingTasks = sortTasksForDisplay(tasks).filter((task) => !task.completed);
+  const reminderGroups = partitionReminders(reminders);
+  const applicationLabels = buildApplicationLabelMap(applicationItems);
+  const timeZone = currentUser.settings?.timezone;
 
   return (
     <DashboardShell user={currentUser.user}>
@@ -104,11 +111,11 @@ export default async function HomePage({
           </div>
           <div className="metric">
             <span className="muted">Pending tasks</span>
-            <strong>{tasks.filter((task) => !task.completed).length}</strong>
+            <strong>{pendingTasks.length}</strong>
           </div>
           <div className="metric">
-            <span className="muted">Signed in</span>
-            <strong>1</strong>
+            <span className="muted">Upcoming reminders</span>
+            <strong>{reminderGroups.upcoming.length}</strong>
           </div>
         </div>
       </section>
@@ -128,22 +135,64 @@ export default async function HomePage({
           </ul>
         </div>
         <div className="panel">
-          <div className="kicker">Focus</div>
-          <h3>What to do next</h3>
-          <ul className="list">
-            <li className="list-item">Move active applications to their latest stage.</li>
-            <li className="list-item">Turn recruiter follow-ups into dated tasks.</li>
-            <li className="list-item">Create reminders before interviews and deadlines.</li>
-          </ul>
+          <div className="hero-header-row">
+            <div>
+              <div className="kicker">Focus</div>
+              <h3>Pending tasks</h3>
+            </div>
+            <Link href="/tasks" className="button secondary">
+              Open lane
+            </Link>
+          </div>
+          {pendingTasks.length ? (
+            <ul className="list compact-list">
+              {pendingTasks.slice(0, 4).map((task) => (
+                <li className="list-item" key={task.id}>
+                  <strong>{task.title}</strong>
+                  <div className="muted">{formatDateTime(task.due_at, timeZone)}</div>
+                  {task.application_id ? (
+                    <div className="muted">{applicationLabels.get(task.application_id) ?? "Linked application"}</div>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="list-item empty-state">
+              No pending tasks yet. Add your next follow-up from the tasks lane.
+            </div>
+          )}
         </div>
         <div className="panel">
-          <div className="kicker">Account</div>
-          <h3>Current session</h3>
-          <ul className="list">
-            <li className="list-item">{currentUser.user.name}</li>
-            <li className="list-item">{currentUser.user.email}</li>
-            <li className="list-item">Your workspace is connected and ready.</li>
-          </ul>
+          <div className="hero-header-row">
+            <div>
+              <div className="kicker">Timing</div>
+              <h3>Upcoming reminders</h3>
+            </div>
+            <Link href="/tasks" className="button secondary">
+              Manage reminders
+            </Link>
+          </div>
+          {reminderGroups.upcoming.length ? (
+            <ul className="list compact-list">
+              {reminderGroups.upcoming.slice(0, 4).map((reminder) => (
+                <li className="list-item" key={reminder.id}>
+                  <strong>{reminder.title}</strong>
+                  <div className="muted">{formatDateTime(reminder.scheduled_for, timeZone)}</div>
+                  <div className="muted">
+                    {reminder.task_id
+                      ? "Linked to task"
+                      : reminder.application_id
+                        ? (applicationLabels.get(reminder.application_id) ?? "Linked application")
+                        : reminder.channel}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="list-item empty-state">
+              No upcoming reminders yet. Schedule your next interview or follow-up reminder.
+            </div>
+          )}
         </div>
       </section>
     </DashboardShell>

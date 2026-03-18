@@ -430,3 +430,73 @@ def test_applications_support_search_filter_sort_and_pagination():
     assert payload["filters"]["q"] == "Engineer"
     assert payload["filters"]["status"] == "interview"
     assert payload["filters"]["sort"] == "company_desc"
+
+
+def test_tasks_are_listed_with_open_due_items_first():
+    app = create_app()
+    client = app.test_client()
+    token = sign_up_and_get_token(client, "tasks-order@example.com", "secret123", "Order User")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    due_open = client.post(
+        "/v1/tasks",
+        json={"title": "Due soon", "due_at": "2026-03-18T10:00:00+00:00"},
+        headers=headers,
+    ).get_json()["data"]["id"]
+    client.post(
+        "/v1/tasks",
+        json={"title": "No due date"},
+        headers=headers,
+    )
+    client.post(
+        "/v1/tasks",
+        json={"title": "Completed task", "completed": True, "due_at": "2026-03-17T10:00:00+00:00"},
+        headers=headers,
+    )
+
+    response = client.get("/v1/tasks", headers=headers)
+
+    assert response.status_code == 200
+    items = response.get_json()["data"]
+    assert items[0]["id"] == due_open
+    assert items[-1]["completed"] is True
+
+
+def test_reminders_are_listed_by_scheduled_time():
+    app = create_app()
+    client = app.test_client()
+    token = sign_up_and_get_token(client, "reminder-order@example.com", "secret123", "Reminder User")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    first_reminder_id = client.post(
+        "/v1/reminders",
+        json={
+            "title": "Soonest reminder",
+            "scheduled_for": "2026-03-18T10:00:00+00:00",
+            "application_id": client.post(
+                "/v1/applications",
+                json={"company": "Acme", "title": "Engineer"},
+                headers=headers,
+            ).get_json()["data"]["id"],
+        },
+        headers=headers,
+    ).get_json()["data"]["id"]
+    client.post(
+        "/v1/reminders",
+        json={
+            "title": "Later reminder",
+            "scheduled_for": "2026-03-19T10:00:00+00:00",
+            "task_id": client.post(
+                "/v1/tasks",
+                json={"title": "Reminder parent"},
+                headers=headers,
+            ).get_json()["data"]["id"],
+        },
+        headers=headers,
+    )
+
+    response = client.get("/v1/reminders", headers=headers)
+
+    assert response.status_code == 200
+    items = response.get_json()["data"]
+    assert items[0]["id"] == first_reminder_id

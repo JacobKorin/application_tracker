@@ -8,6 +8,7 @@ import {
 import { DashboardShell } from "@/components/dashboard-shell";
 import { getApplications, getCurrentUser, getReminders, getTasks, UnauthorizedError } from "@/lib/api";
 import { LoggedOutView } from "@/lib/auth-page";
+import { buildApplicationLabelMap, formatDateTime, partitionReminders, sortTasksForDisplay } from "@/lib/execution";
 import { clearSession, getSession } from "@/lib/session";
 
 export default async function TasksPage() {
@@ -36,13 +37,33 @@ export default async function TasksPage() {
   }
 
   const applicationItems = applications.items;
+  const applicationLabels = buildApplicationLabelMap(applicationItems);
+  const orderedTasks = sortTasksForDisplay(tasks);
+  const openTasks = orderedTasks.filter((task) => !task.completed);
+  const completedTasks = orderedTasks.filter((task) => task.completed);
+  const reminderGroups = partitionReminders(reminders);
+  const timeZone = currentUser.settings?.timezone;
 
   return (
     <DashboardShell user={currentUser.user}>
       <section className="hero">
-        <div className="kicker">Execution lane</div>
-        <h1>Tasks and reminders</h1>
-        <p className="muted">Keep interview prep, follow-ups, and deadlines visible across devices.</p>
+        <div className="hero-header-row">
+          <div>
+            <div className="kicker">Execution lane</div>
+            <h1>Tasks and reminders</h1>
+            <p className="muted">Keep interview prep, follow-ups, and deadlines visible across devices.</p>
+          </div>
+          <div className="metrics">
+            <div className="metric">
+              <span className="muted">Open tasks</span>
+              <strong>{openTasks.length}</strong>
+            </div>
+            <div className="metric">
+              <span className="muted">Upcoming reminders</span>
+              <strong>{reminderGroups.upcoming.length}</strong>
+            </div>
+          </div>
+        </div>
       </section>
       <section className="panel-grid panel-grid-wide">
         <form action={createTaskAction} className="panel form-card">
@@ -114,44 +135,139 @@ export default async function TasksPage() {
           </button>
         </form>
       </section>
-      <section className="panel-grid">
-        {tasks.map((task) => (
-          <article className="panel" key={task.id}>
-            <div className="kicker">{task.completed ? "Done" : "Open"}</div>
-            <h3>{task.title}</h3>
-            <p className="muted">Due: {task.due_at ?? "Not scheduled"}</p>
-            <div className="cta-row">
-              <form action={toggleTaskAction} className="inline-form">
-                <input type="hidden" name="task_id" value={task.id} />
-                <input type="hidden" name="completed" value={task.completed ? "false" : "true"} />
-                <button className="button secondary" type="submit">
-                  {task.completed ? "Mark open" : "Mark done"}
-                </button>
-              </form>
-              <form action={deleteTaskAction}>
-                <input type="hidden" name="task_id" value={task.id} />
-                <button className="button ghost" type="submit">
-                  Delete
-                </button>
-              </form>
+      <section className="panel-grid panel-grid-wide">
+        <div className="panel">
+          <div className="kicker">Open tasks</div>
+          <h3>What needs attention now</h3>
+          {openTasks.length ? (
+            <div className="list">
+              {openTasks.map((task) => (
+                <article className="list-item" key={task.id}>
+                  <div className="hero-header-row">
+                    <div>
+                      <strong>{task.title}</strong>
+                      <div className="muted">Due {formatDateTime(task.due_at, timeZone)}</div>
+                      {task.application_id ? (
+                        <div className="muted">{applicationLabels.get(task.application_id) ?? "Linked application"}</div>
+                      ) : null}
+                    </div>
+                    <div className="cta-row">
+                      <form action={toggleTaskAction} className="inline-form">
+                        <input type="hidden" name="task_id" value={task.id} />
+                        <input type="hidden" name="completed" value="true" />
+                        <button className="button secondary" type="submit">
+                          Mark done
+                        </button>
+                      </form>
+                      <form action={deleteTaskAction}>
+                        <input type="hidden" name="task_id" value={task.id} />
+                        <button className="button ghost" type="submit">
+                          Delete
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
-          </article>
-        ))}
+          ) : (
+            <div className="list-item empty-state">No open tasks. Add your next follow-up or deadline above.</div>
+          )}
+        </div>
+        <div className="panel">
+          <div className="kicker">Completed tasks</div>
+          <h3>Recently finished</h3>
+          {completedTasks.length ? (
+            <div className="list compact-list">
+              {completedTasks.map((task) => (
+                <article className="list-item" key={task.id}>
+                  <div className="hero-header-row">
+                    <div>
+                      <strong>{task.title}</strong>
+                      <div className="muted">Completed task</div>
+                      {task.application_id ? (
+                        <div className="muted">{applicationLabels.get(task.application_id) ?? "Linked application"}</div>
+                      ) : null}
+                    </div>
+                    <div className="cta-row">
+                      <form action={toggleTaskAction} className="inline-form">
+                        <input type="hidden" name="task_id" value={task.id} />
+                        <input type="hidden" name="completed" value="false" />
+                        <button className="button secondary" type="submit">
+                          Reopen
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="list-item empty-state">Completed tasks will appear here once you start checking work off.</div>
+          )}
+        </div>
       </section>
-      <section className="panel-grid">
-        {reminders.map((reminder) => (
-          <article className="panel" key={reminder.id}>
-            <div className="kicker">{reminder.channel}</div>
-            <h3>{reminder.title}</h3>
-            <p className="muted">Scheduled: {reminder.scheduled_for}</p>
-            <form action={deleteReminderAction}>
-              <input type="hidden" name="reminder_id" value={reminder.id} />
-              <button className="button ghost" type="submit">
-                Delete reminder
-              </button>
-            </form>
-          </article>
-        ))}
+      <section className="panel-grid panel-grid-wide">
+        <div className="panel">
+          <div className="kicker">Upcoming reminders</div>
+          <h3>Keep the next deadline visible</h3>
+          {reminderGroups.upcoming.length ? (
+            <div className="list">
+              {reminderGroups.upcoming.map((reminder) => (
+                <article className="list-item" key={reminder.id}>
+                  <div className="hero-header-row">
+                    <div>
+                      <strong>{reminder.title}</strong>
+                      <div className="muted">{formatDateTime(reminder.scheduled_for, timeZone)}</div>
+                      <div className="muted">
+                        {reminder.task_id
+                          ? "Linked to task"
+                          : reminder.application_id
+                            ? (applicationLabels.get(reminder.application_id) ?? "Linked application")
+                            : reminder.channel}
+                      </div>
+                    </div>
+                    <form action={deleteReminderAction}>
+                      <input type="hidden" name="reminder_id" value={reminder.id} />
+                      <button className="button ghost" type="submit">
+                        Delete reminder
+                      </button>
+                    </form>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="list-item empty-state">No upcoming reminders. Schedule your next follow-up above.</div>
+          )}
+        </div>
+        <div className="panel">
+          <div className="kicker">Past reminders</div>
+          <h3>Recently scheduled</h3>
+          {reminderGroups.past.length ? (
+            <div className="list compact-list">
+              {reminderGroups.past.map((reminder) => (
+                <article className="list-item" key={reminder.id}>
+                  <div className="hero-header-row">
+                    <div>
+                      <strong>{reminder.title}</strong>
+                      <div className="muted">{formatDateTime(reminder.scheduled_for, timeZone)}</div>
+                      <div className="muted">{reminder.channel}</div>
+                    </div>
+                    <form action={deleteReminderAction}>
+                      <input type="hidden" name="reminder_id" value={reminder.id} />
+                      <button className="button ghost" type="submit">
+                        Delete
+                      </button>
+                    </form>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="list-item empty-state">Past reminders will collect here once items move behind you.</div>
+          )}
+        </div>
       </section>
     </DashboardShell>
   );

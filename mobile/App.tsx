@@ -2,18 +2,27 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 
-import { ApplicationsScreen } from "./src/components/applications-screen";
 import { AuthScreen } from "./src/components/auth-screen";
+import { WorkspaceScreen } from "./src/components/workspace-screen";
 import {
   Application,
   AuthResponse,
+  Reminder,
+  Task,
   UnauthorizedError,
   createApplication,
+  createReminder,
+  createTask,
+  deleteReminder,
+  deleteTask,
   getApplications,
   getCurrentUser,
+  getReminders,
+  getTasks,
   signIn,
   signUp,
   updateApplication,
+  updateTask,
 } from "./src/lib/api";
 import { clearSession, loadSession, saveSession, Session } from "./src/lib/session";
 import { colors } from "./src/theme";
@@ -35,6 +44,8 @@ export default function App() {
   const [loadingApplications, setLoadingApplications] = useState(false);
   const [applicationsError, setApplicationsError] = useState<string | null>(null);
   const [applicationsInfo, setApplicationsInfo] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
 
   useEffect(() => {
     let active = true;
@@ -147,6 +158,30 @@ export default function App() {
     }
   }
 
+  async function refreshExecutionLane() {
+    const token = session?.token;
+    if (!token) {
+      return;
+    }
+
+    try {
+      setLoadingApplications(true);
+      setApplicationsError(null);
+      const [taskItems, reminderItems] = await Promise.all([getTasks(token), getReminders(token)]);
+      setTasks(taskItems);
+      setReminders(reminderItems);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to load tasks and reminders.";
+      setApplicationsError(message);
+      if (error instanceof UnauthorizedError || message.toLowerCase().includes("expired")) {
+        setSession(null);
+        setAuthInfo("Your session expired. Please sign in again.");
+      }
+    } finally {
+      setLoadingApplications(false);
+    }
+  }
+
   useEffect(() => {
     if (!session) {
       return;
@@ -159,15 +194,19 @@ export default function App() {
       try {
         setLoadingApplications(true);
         setApplicationsError(null);
-        const [currentUser, response] = await Promise.all([
+        const [currentUser, response, taskItems, reminderItems] = await Promise.all([
           getCurrentUser(token),
           getApplications(token, { sort: "updated_desc" }),
+          getTasks(token),
+          getReminders(token),
         ]);
         if (!active) {
           return;
         }
         setSession((current) => (current ? { ...current, user: currentUser.user } : current));
         setApplications(response.items);
+        setTasks(taskItems);
+        setReminders(reminderItems);
         setApplicationsInfo("Workspace synced with Render.");
       } catch (error) {
         if (!active) {
@@ -213,7 +252,7 @@ export default function App() {
         status: "saved",
       });
       setApplicationsInfo("Application created.");
-      await refreshApplications({ sort: "updated_desc" });
+      await Promise.all([refreshApplications({ sort: "updated_desc" }), refreshExecutionLane()]);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to create application.";
       setApplicationsError(message);
@@ -246,9 +285,122 @@ export default function App() {
     }
   }
 
+  async function handleCreateTask(input: { title: string; application_id?: string; due_at?: string }) {
+    const token = session?.token;
+    if (!token) {
+      return;
+    }
+
+    try {
+      await createTask(token, input);
+      setApplicationsInfo("Task created.");
+      await refreshExecutionLane();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to create task.";
+      setApplicationsError(message);
+      if (error instanceof UnauthorizedError) {
+        setSession(null);
+        setAuthInfo("Your session expired. Please sign in again.");
+      }
+      throw error;
+    }
+  }
+
+  async function handleToggleTask(taskId: string, completed: boolean) {
+    const token = session?.token;
+    if (!token) {
+      return;
+    }
+
+    try {
+      await updateTask(token, taskId, { completed });
+      setApplicationsInfo(completed ? "Task marked done." : "Task reopened.");
+      await refreshExecutionLane();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update task.";
+      setApplicationsError(message);
+      if (error instanceof UnauthorizedError) {
+        setSession(null);
+        setAuthInfo("Your session expired. Please sign in again.");
+      }
+      throw error;
+    }
+  }
+
+  async function handleDeleteTask(taskId: string) {
+    const token = session?.token;
+    if (!token) {
+      return;
+    }
+
+    try {
+      await deleteTask(token, taskId);
+      setApplicationsInfo("Task deleted.");
+      await refreshExecutionLane();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to delete task.";
+      setApplicationsError(message);
+      if (error instanceof UnauthorizedError) {
+        setSession(null);
+        setAuthInfo("Your session expired. Please sign in again.");
+      }
+      throw error;
+    }
+  }
+
+  async function handleCreateReminder(input: {
+    title: string;
+    application_id?: string;
+    task_id?: string;
+    scheduled_for: string;
+    channel: string;
+  }) {
+    const token = session?.token;
+    if (!token) {
+      return;
+    }
+
+    try {
+      await createReminder(token, input);
+      setApplicationsInfo("Reminder created.");
+      await refreshExecutionLane();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to create reminder.";
+      setApplicationsError(message);
+      if (error instanceof UnauthorizedError) {
+        setSession(null);
+        setAuthInfo("Your session expired. Please sign in again.");
+      }
+      throw error;
+    }
+  }
+
+  async function handleDeleteReminder(reminderId: string) {
+    const token = session?.token;
+    if (!token) {
+      return;
+    }
+
+    try {
+      await deleteReminder(token, reminderId);
+      setApplicationsInfo("Reminder deleted.");
+      await refreshExecutionLane();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to delete reminder.";
+      setApplicationsError(message);
+      if (error instanceof UnauthorizedError) {
+        setSession(null);
+        setAuthInfo("Your session expired. Please sign in again.");
+      }
+      throw error;
+    }
+  }
+
   function handleSignOut() {
     setSession(null);
     setApplications([]);
+    setTasks([]);
+    setReminders([]);
     setApplicationsError(null);
     setApplicationsInfo("Signed out.");
     setAuthError(null);
@@ -272,16 +424,23 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="dark" />
       {session ? (
-        <ApplicationsScreen
+        <WorkspaceScreen
           applications={applications}
           currentUser={session.user}
           errorMessage={applicationsError}
           infoMessage={applicationsInfo}
           loading={loadingApplications}
           onCreateApplication={handleCreateApplication}
-          onRefresh={refreshApplications}
+          onCreateReminder={handleCreateReminder}
+          onCreateTask={handleCreateTask}
+          onDeleteReminder={handleDeleteReminder}
+          onDeleteTask={handleDeleteTask}
+          onRefreshApplications={refreshApplications}
           onSignOut={handleSignOut}
+          onToggleTask={handleToggleTask}
           onUpdateApplication={handleUpdateApplication}
+          reminders={reminders}
+          tasks={tasks}
         />
       ) : (
         <AuthScreen
