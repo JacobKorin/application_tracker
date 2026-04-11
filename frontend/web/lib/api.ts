@@ -137,7 +137,9 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
     const body = await response.text();
     const preview = body.slice(0, 120).trim();
     if (response.status === 429) {
-      throw new RateLimitError("Too many attempts. Please wait a few minutes and try again.");
+      throw new Error(
+        `API returned an upstream 429 response. Received: ${preview || "empty response"}`,
+      );
     }
     throw new Error(
       `API returned a non-JSON response. Check NEXT_PUBLIC_API_BASE_URL. Received: ${preview || "empty response"}`,
@@ -151,7 +153,11 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
       throw new UnauthorizedError(message ?? "Unauthorized");
     }
     if (response.status === 429) {
-      throw new RateLimitError(message ?? "Too many attempts. Please wait and try again.");
+      const normalizedMessage = (message ?? "").toLowerCase();
+      if (normalizedMessage.includes("too many") || normalizedMessage.includes("rate limit")) {
+        throw new RateLimitError(message ?? "Too many attempts. Please wait and try again.");
+      }
+      throw new Error(message ?? "Request failed.");
     }
     throw new Error(message ?? "Request failed.");
   }
