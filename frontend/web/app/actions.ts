@@ -49,10 +49,11 @@ function requireValue(formData: FormData, key: string) {
 export async function signInAction(formData: FormData) {
   const email = requireValue(formData, "email");
   const password = requireValue(formData, "password");
+
+  let payload;
   try {
-    const payload = await signIn(email, password);
+    payload = await signIn(email, password);
     await setSessionCookie(payload);
-    redirect("/");
   } catch (error) {
     if (error instanceof RateLimitError) {
       redirect("/?authMessage=sign-in-rate-limited");
@@ -62,20 +63,18 @@ export async function signInAction(formData: FormData) {
     }
     redirect("/?authMessage=sign-in-unavailable");
   }
+
+  redirect("/");
 }
 
 export async function signUpAction(formData: FormData) {
   const name = requireValue(formData, "name");
   const email = requireValue(formData, "email");
   const password = requireValue(formData, "password");
-  try {
-    const payload = await signUp(email, password, name);
-    if ("token" in payload) {
-      await setSessionCookie(payload);
-      redirect("/");
-    }
 
-    redirect("/?authMessage=signup-check-signin");
+  let payload;
+  try {
+    payload = await signUp(email, password, name);
   } catch (error) {
     if (error instanceof RateLimitError) {
       redirect("/?authMessage=sign-up-rate-limited");
@@ -83,6 +82,13 @@ export async function signUpAction(formData: FormData) {
 
     redirect("/?authMessage=sign-up-unavailable");
   }
+
+  if ("token" in payload) {
+    await setSessionCookie(payload);
+    redirect("/");
+  }
+
+  redirect("/?authMessage=signup-check-signin");
 }
 
 export async function signOutAction() {
