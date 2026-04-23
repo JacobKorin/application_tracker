@@ -1,4 +1,5 @@
 import { signInAction, signUpAction } from "@/app/actions";
+import { ApiWarmup } from "@/components/api-warmup";
 
 const AUTH_MESSAGES: Record<string, string> = {
   "signup-check-signin": "If that email is available, the account was created. Otherwise, try signing in instead.",
@@ -18,6 +19,7 @@ export function LoggedOutView({
 }) {
   return (
     <div className="shell">
+      <ApiWarmup />
       <section className="hero">
         <div className="kicker">Welcome</div>
         <div className="hero-grid">

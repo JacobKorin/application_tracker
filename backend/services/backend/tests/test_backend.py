@@ -22,6 +22,16 @@ def test_health_endpoint():
     assert response.get_json()["data"]["service"] == "backend"
 
 
+def test_ready_endpoint_checks_database():
+    app = create_app()
+    client = app.test_client()
+
+    response = client.get("/ready")
+
+    assert response.status_code == 200
+    assert response.get_json()["data"]["status"] == "ready"
+
+
 def test_sign_in_with_demo_user():
     app = create_app()
     client = app.test_client()

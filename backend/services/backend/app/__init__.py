@@ -20,7 +20,14 @@ def create_app() -> Flask:
     app.config["SERVICE_CONFIG"] = config
     cors_origins: str | list[str]
     cors_origins = "*" if "*" in config.cors_origins else list(config.cors_origins)
-    CORS(app, resources={r"/v1/*": {"origins": cors_origins}})
+    CORS(
+        app,
+        resources={
+            r"/v1/*": {"origins": cors_origins},
+            r"/health": {"origins": cors_origins},
+            r"/ready": {"origins": cors_origins},
+        },
+    )
     init_db(app)
 
     @app.errorhandler(AuthError)

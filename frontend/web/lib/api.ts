@@ -1,9 +1,5 @@
 import { getSession, Session } from "@/lib/session";
-
-const DEFAULT_API_BASE_URL = "https://application-tracker-suvm.onrender.com";
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/+$/, "") || DEFAULT_API_BASE_URL;
+import { API_BASE_URL, API_READY_URL } from "@/lib/api-base-url";
 
 type ApiEnvelope<T> = {
   data: T;
@@ -106,6 +102,13 @@ type RequestOptions = {
   idempotencyKey?: string;
 };
 
+const RETRYABLE_STATUS_CODES = new Set([408, 425, 500, 502, 503, 504]);
+const RETRYABLE_AUTH_PATHS = new Set(["/v1/auth/sign-in", "/v1/auth/sign-up"]);
+const API_READY_POLL_INTERVAL_MS = 1_500;
+const API_READY_TIMEOUT_MS = 45_000;
+
+let pendingApiReadyCheck: Promise<void> | null = null;
+
 function buildHeaders(session: Session | null, idempotencyKey?: string): HeadersInit {
   const headers: Record<string, string> = {};
 
@@ -120,17 +123,118 @@ function buildHeaders(session: Session | null, idempotencyKey?: string): Headers
   return headers;
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldRetryRequest(path: string, options: RequestOptions): boolean {
+  const method = options.method ?? "GET";
+  return method === "GET" || RETRYABLE_AUTH_PATHS.has(path) || Boolean(options.idempotencyKey);
+}
+
+function isTransientResponse(response: Response): boolean {
+  return RETRYABLE_STATUS_CODES.has(response.status);
+}
+
+function isTransientFetchError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("fetch failed") ||
+    message.includes("network") ||
+    message.includes("timeout") ||
+    message.includes("timed out") ||
+    message.includes("socket") ||
+    message.includes("econnreset") ||
+    message.includes("econnrefused") ||
+    message.includes("enotfound")
+  );
+}
+
+async function pollApiReady(): Promise<void> {
+  const startedAt = Date.now();
+  let lastError: unknown;
+
+  while (Date.now() - startedAt < API_READY_TIMEOUT_MS) {
+    try {
+      const response = await fetch(API_READY_URL, {
+        cache: "no-store",
+      });
+      if (response.ok) {
+        return;
+      }
+      lastError = new UpstreamResponseError(`API readiness check failed with ${response.status}.`);
+    } catch (error) {
+      lastError = error;
+    }
+
+    await sleep(API_READY_POLL_INTERVAL_MS);
+  }
+
+  if (lastError instanceof Error) {
+    throw lastError;
+  }
+
+  throw new UpstreamResponseError("API did not become ready in time.");
+}
+
+async function waitForApiReady() {
+  if (!pendingApiReadyCheck) {
+    pendingApiReadyCheck = pollApiReady().finally(() => {
+      pendingApiReadyCheck = null;
+    });
+  }
+
+  await pendingApiReadyCheck;
+}
+
+async function fetchJsonResponse(path: string, options: RequestOptions, session: Session | null) {
+  const replaySafe = shouldRetryRequest(path, options);
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < (replaySafe ? 2 : 1); attempt += 1) {
+    try {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        method: options.method ?? "GET",
+        headers: {
+          ...buildHeaders(session, options.idempotencyKey),
+          ...(options.body ? { "Content-Type": "application/json" } : {}),
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined,
+        cache: "no-store",
+      });
+
+      if (attempt === 0 && replaySafe && isTransientResponse(response)) {
+        await waitForApiReady();
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+
+      if (attempt === 0 && replaySafe && isTransientFetchError(error)) {
+        await waitForApiReady();
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  if (lastError instanceof Error) {
+    throw lastError;
+  }
+
+  throw new UpstreamResponseError("Request failed before the API became ready.");
+}
+
 async function requestJson<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const session = options.session ?? (await getSession());
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: options.method ?? "GET",
-    headers: {
-      ...buildHeaders(session, options.idempotencyKey),
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined,
-    cache: "no-store",
-  });
+  const response = await fetchJsonResponse(path, options, session);
 
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
