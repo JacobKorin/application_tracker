@@ -6,7 +6,8 @@ import {
   toggleTaskAction,
 } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { getApplications, getCurrentUser, getReminders, getTasks, UnauthorizedError } from "@/lib/api";
+import { UpstreamUnavailable } from "@/components/upstream-unavailable";
+import { getApplications, getCurrentUser, getReminders, getTasks, UnauthorizedError, UpstreamResponseError } from "@/lib/api";
 import { LoggedOutView } from "@/lib/auth-page";
 import { buildApplicationLabelMap, formatDateTime, partitionReminders, sortTasksForDisplay } from "@/lib/execution";
 import { clearSession, getSession } from "@/lib/session";
@@ -32,6 +33,9 @@ export default async function TasksPage() {
     if (error instanceof UnauthorizedError) {
       await clearSession();
       return <LoggedOutView sessionExpired />;
+    }
+    if (error instanceof UpstreamResponseError) {
+      return <UpstreamUnavailable retryHref="/tasks" />;
     }
     throw error;
   }

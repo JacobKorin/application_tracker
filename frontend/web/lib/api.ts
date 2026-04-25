@@ -26,9 +26,12 @@ export class RateLimitError extends Error {
 }
 
 export class UpstreamResponseError extends Error {
-  constructor(message: string) {
+  statusCode?: number;
+
+  constructor(message: string, statusCode?: number) {
     super(message);
     this.name = "UpstreamResponseError";
+    this.statusCode = statusCode;
   }
 }
 
@@ -133,7 +136,16 @@ function shouldRetryRequest(path: string, options: RequestOptions): boolean {
 }
 
 function isTransientResponse(response: Response): boolean {
-  return RETRYABLE_STATUS_CODES.has(response.status);
+  if (RETRYABLE_STATUS_CODES.has(response.status)) {
+    return true;
+  }
+
+  if (response.status !== 429) {
+    return false;
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  return !contentType.includes("application/json");
 }
 
 function isTransientFetchError(error: unknown): boolean {
@@ -241,8 +253,15 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
     const body = await response.text();
     const preview = body.slice(0, 120).trim();
     if (response.status === 429) {
-      throw new Error(
+      throw new UpstreamResponseError(
         `API returned an upstream 429 response. Received: ${preview || "empty response"}`,
+        429,
+      );
+    }
+    if (response.status >= 500) {
+      throw new UpstreamResponseError(
+        `API returned an upstream ${response.status} response. Received: ${preview || "empty response"}`,
+        response.status,
       );
     }
     throw new Error(
@@ -261,7 +280,10 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
       if (normalizedMessage.includes("too many") || normalizedMessage.includes("rate limit")) {
         throw new RateLimitError(message ?? "Too many attempts. Please wait and try again.");
       }
-      throw new Error(message ?? "Request failed.");
+      throw new UpstreamResponseError(message ?? "Request failed.", 429);
+    }
+    if (response.status >= 500) {
+      throw new UpstreamResponseError(message ?? "Request failed.", response.status);
     }
     throw new Error(message ?? "Request failed.");
   }
