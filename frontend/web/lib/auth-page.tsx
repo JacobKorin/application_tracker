@@ -1,4 +1,5 @@
 import { signInAction, signUpAction } from "@/app/actions";
+import { AuthSubmitButton } from "@/components/auth-submit-button";
 
 const AUTH_MESSAGES: Record<string, string> = {
   "signup-check-signin": "If that email is available, the account was created. Otherwise, try signing in instead.",
@@ -51,9 +52,11 @@ export function LoggedOutView({
                 <span>Password</span>
                 <input name="password" type="password" placeholder="Your password" required />
               </label>
-              <button className="button primary" type="submit">
-                Sign in
-              </button>
+              <AuthSubmitButton
+                idleLabel="Sign in"
+                pendingLabel="Signing in..."
+                pendingMessage="Signing you in. If the backend is waking up, this can take a few seconds."
+              />
             </form>
             <form action={signUpAction} className="panel form-card">
               <div className="kicker">Create account</div>
@@ -69,9 +72,11 @@ export function LoggedOutView({
                 <span>Password</span>
                 <input name="password" type="password" placeholder="Create a password" required />
               </label>
-              <button className="button primary" type="submit">
-                Create account
-              </button>
+              <AuthSubmitButton
+                idleLabel="Create account"
+                pendingLabel="Creating account..."
+                pendingMessage="Creating your account. If the backend is waking up, this can take a few seconds."
+              />
             </form>
           </div>
         </div>
