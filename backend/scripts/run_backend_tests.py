@@ -8,10 +8,6 @@ from pathlib import Path
 
 
 SERVICE_TEST_DIRS = (
-    Path("backend/services/api-gateway/tests"),
-    Path("backend/services/application-service/tests"),
-    Path("backend/services/identity-service/tests"),
-    Path("backend/services/notification-service/tests"),
     Path("backend/services/backend/tests"),
 )
 

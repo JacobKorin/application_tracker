@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "job-application-tracker-backend"
 version = "0.1.0"
-description = "Shared backend package for the job application tracker microservices."
+description = "Backend package for the job application tracker."
 requires-python = ">=3.10"
 dependencies = [
   "Flask>=3.0,<4.0",

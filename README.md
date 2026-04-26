@@ -14,10 +14,6 @@ Production-oriented monorepo scaffold for a job application tracker with:
 backend/
   services/
     backend/
-    api-gateway/
-    identity-service/
-    application-service/
-    notification-service/
   shared/python/job_tracker_shared/
 frontend/web/
 mobile/
@@ -121,7 +117,7 @@ Copy `.env.example` to `.env` and adjust values for local development. Productio
 This repository is a production-ready scaffold rather than a fully completed product. The following are implemented:
 
 - single Flask deploy target for Render with versioned APIs
-- preserved domain boundaries for identity, application, and notification concerns
+- route-level domain boundaries for identity, application, and notification concerns
 - SQLAlchemy persistence layer with Alembic migrations
 - shared API contract and design tokens
 - web and mobile starter experiences for dashboard workflows

@@ -11,7 +11,7 @@
 - public Next.js frontend
 - calls the backend using `NEXT_PUBLIC_API_BASE_URL`
 
-## Domain boundaries retained in code
+## Domain boundaries retained in the backend
 
 - identity: account lifecycle, settings, auth stubs
 - applications: applications, stage history, tasks, contacts, reminders
@@ -26,6 +26,6 @@
 
 ## Current implementation notes
 
-- The scaffold uses in-memory repositories so the APIs are immediately runnable.
-- Route shapes and domain boundaries are designed to survive a future split back into microservices if needed.
+- The deployed backend is the only backend service kept in the repo.
+- Domain boundaries are represented by route modules inside the single Flask app.
 - Notification dispatch includes idempotency handling to preserve the intended contract.
