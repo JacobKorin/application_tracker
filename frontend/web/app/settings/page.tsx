@@ -1,6 +1,5 @@
 import { updateSettingsAction } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { UpstreamUnavailable } from "@/components/upstream-unavailable";
 import { getCurrentUser, getSettings, UnauthorizedError, UpstreamResponseError } from "@/lib/api";
 import { LoggedOutView } from "@/lib/auth-page";
 import { clearSession, getSession } from "@/lib/session";
@@ -21,7 +20,8 @@ export default async function SettingsPage() {
       return <LoggedOutView sessionExpired />;
     }
     if (error instanceof UpstreamResponseError) {
-      return <UpstreamUnavailable retryHref="/settings" />;
+      await clearSession();
+      return <LoggedOutView authMessage="session-check-failed" />;
     }
     throw error;
   }

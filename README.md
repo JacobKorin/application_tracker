@@ -1,6 +1,6 @@
 # Job Application Tracker
 
-Production-oriented monorepo scaffold for a job application tracker with:
+Production-oriented monorepo for a job application tracker with:
 
 - `Next.js` web app
 - `React Native` mobile app via Expo
@@ -114,10 +114,10 @@ Copy `.env.example` to `.env` and adjust values for local development. Productio
 
 ## Current status
 
-This repository is a production-ready scaffold rather than a fully completed product. The following are implemented:
+This repository is a production-oriented application foundation rather than a fully completed product. The following are implemented:
 
 - single Flask deploy target for Render with versioned APIs
-- route-level domain boundaries for identity, application, and notification concerns
+- route-level domain boundaries inside the backend for identity, application, execution, contact, and notification concerns
 - SQLAlchemy persistence layer with Alembic migrations
 - shared API contract and design tokens
 - web and mobile starter experiences for dashboard workflows

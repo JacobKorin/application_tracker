@@ -3,24 +3,35 @@
 ## Environments
 
 - `dev`: local Docker Compose and direct backend execution
-- `staging`: Render web frontend plus one public backend service
-- `prod`: same shape with isolated credentials and stricter alerting
+- `staging`: Render web frontend plus one public Flask backend service
+- `prod`: same service shape with isolated credentials and stricter alerting
 
 ## Minimum production controls
 
-- health and readiness endpoints on every service
+- health and readiness endpoints on the backend service
 - structured JSON logging
 - centralized error reporting
 - database backups and restore rehearsal
 - secrets managed by platform environment groups
 - CI gates for tests and syntax checks before deploy
 
-## Migration plan
+## Current deployment shape
 
-1. Replace in-memory repositories with SQLAlchemy-backed persistence.
-2. Add Alembic migrations and rollback testing.
-3. Add Redis-backed worker deployment for notification fanout.
-4. Integrate real providers for Google OAuth, email, and push notifications.
+- `application-tracker-suvm`: Flask backend Docker service on Render.
+- `job-tracker-web`: Next.js web Docker service on Render.
+- `job-tracker-postgres`: managed Render Postgres database.
+
+The backend entrypoint runs Alembic migrations before Gunicorn starts. The web
+service points at the backend through `NEXT_PUBLIC_API_BASE_URL`.
+
+## Remaining implementation plan
+
+1. Add rollback rehearsal for Alembic migrations.
+2. Add Redis-backed worker deployment only when notification fanout or other
+   background jobs are implemented.
+3. Integrate real providers for Google OAuth, email, and push notifications.
+4. Add centralized error reporting and production alerting.
+5. Expand web/mobile automated coverage beyond backend regression tests.
 
 ## RPO / RTO targets
 

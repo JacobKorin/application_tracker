@@ -33,7 +33,7 @@ async function setSessionCookie(payload: { token: string; user: { id: string; em
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/",
-      maxAge: 60 * 60 * 24 * 14,
+      maxAge: 60 * 60 * 24,
     },
   );
 }

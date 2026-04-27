@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { createApplicationAndRedirectAction } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { UpstreamUnavailable } from "@/components/upstream-unavailable";
 import { getCurrentUser, UnauthorizedError, UpstreamResponseError } from "@/lib/api";
 import { LoggedOutView } from "@/lib/auth-page";
 import { clearSession, getSession } from "@/lib/session";
@@ -22,7 +21,8 @@ export default async function NewApplicationPage() {
       return <LoggedOutView sessionExpired />;
     }
     if (error instanceof UpstreamResponseError) {
-      return <UpstreamUnavailable retryHref="/applications/new" />;
+      await clearSession();
+      return <LoggedOutView authMessage="session-check-failed" />;
     }
     throw error;
   }

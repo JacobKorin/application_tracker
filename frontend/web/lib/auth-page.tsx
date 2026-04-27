@@ -8,6 +8,7 @@ const AUTH_MESSAGES: Record<string, string> = {
   "sign-in-unavailable": "Sign-in is temporarily unavailable. Please try again shortly.",
   "sign-up-rate-limited": "Too many sign-up attempts. Wait a few minutes, then try again.",
   "sign-up-unavailable": "Sign-up is temporarily unavailable. Please try again shortly.",
+  "session-check-failed": "We could not verify your previous session. Please sign in again.",
 };
 
 export function LoggedOutView({

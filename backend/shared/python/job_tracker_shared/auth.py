@@ -22,7 +22,7 @@ def create_access_token(user_id: str, email: str, name: str) -> str:
         "email": email,
         "name": name,
         "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(days=14)).timestamp()),
+        "exp": int((now + timedelta(days=1)).timestamp()),
         "iss": config.service_name,
     }
     return jwt.encode(payload, config.jwt_secret, algorithm="HS256")

@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { createApplicationAction } from "@/app/actions";
-import { UpstreamUnavailable } from "@/components/upstream-unavailable";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { getApplications, getCurrentUser, getReminders, getTasks, UnauthorizedError, UpstreamResponseError } from "@/lib/api";
 import { LoggedOutView } from "@/lib/auth-page";
@@ -38,7 +37,8 @@ export default async function HomePage({
       return <LoggedOutView sessionExpired authMessage={params?.authMessage} />;
     }
     if (error instanceof UpstreamResponseError) {
-      return <UpstreamUnavailable retryHref="/" />;
+      await clearSession();
+      return <LoggedOutView authMessage="session-check-failed" />;
     }
     throw error;
   }
